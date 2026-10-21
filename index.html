@@ -1,0 +1,1192 @@
+<!doctype html>
+<!--
+Last.fm Radio for foobar2000
+Copyright (c) 2026 gloq
+SPDX-License-Identifier: MIT
+See LICENSE for the full license text.
+-->
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Last.fm Radio 2.3.0</title>
+<style>
+:root {color-scheme:dark;font-family:Segoe UI,Arial,sans-serif}
+*{box-sizing:border-box}body{background:#191919;color:#ececec;margin:0;padding:16px;font-size:13px}
+h2{color:#ed5269;margin:0 0 12px}h3{margin:5px 0;font-size:15px}
+.panel{background:#252525;padding:14px;margin:10px 0;border-radius:8px}
+label{display:block;margin:9px 0 5px}.row{display:flex;gap:14px;flex-wrap:wrap;align-items:end}
+input,select{background:#343434;color:#eee;border:1px solid #626262;border-radius:5px;padding:7px}
+input[type=password],input[type=text]{width:100%}input[type=number]{width:88px}
+input[type=checkbox]{accent-color:#e94f64}
+button{border:0;background:#c43c52;color:white;padding:10px 13px;border-radius:5px;cursor:pointer}
+button.secondary{background:#484848}button:disabled{opacity:.45;cursor:default}
+.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}.muted{color:#aaa}.ok{color:#79d99c}.error{color:#ff8897}
+.small{font-size:12px}.track{border-bottom:1px solid #3b3b3b;padding:9px 0}
+.track strong{display:block;margin-bottom:3px}#results{max-height:55vh;overflow:auto}
+.missing{color:#c9a7a7}.absent-list{max-height:35vh;overflow-y:auto}.absent-row{border-bottom:1px solid #393939;padding:7px 0}.absent-row small{color:#aaa}#status{white-space:pre-wrap;line-height:1.5}#summary{white-space:pre-wrap;line-height:1.6}
+.tabs{display:flex;gap:5px;margin:10px 0;flex-wrap:wrap}.tab{background:#343434;flex:1;min-width:90px}.tab.active{background:#bd4054}.tabpage[hidden]{display:none!important}
+details summary{cursor:pointer;font-weight:600;margin:3px 0}.notice{font-size:12px;color:#bbb;line-height:1.5}.friendline{display:flex;gap:12px;align-items:center}a.lastlink{color:#8fc5ff;text-decoration:none}a.lastlink:hover{text-decoration:underline}.activity{font-size:11px;margin-top:4px}.excluded{opacity:.7}
+.genre-choice{display:flex;gap:6px;align-items:center;margin:5px 0;font-size:12px}.genre-choice input{width:auto}#genreStatus{white-space:pre-wrap}#genreResults .ok{white-space:pre-wrap}.country-section{border-top:1px solid #484848;margin-top:16px;padding-top:14px}</style>
+</head>
+<body>
+<h2>♫ Last.fm Radio <span class="small muted">v2.3.0</span></h2>
+<div class="tabs" role="tablist" aria-label="Sections Last.fm Radio">
+<button class="tab active" data-tab="discovery">Découverte</button><button class="tab" data-tab="tags">Tags</button><button class="tab" data-tab="friends">Utilisateurs</button><button class="tab" data-tab="genres">Genres</button><button class="tab" data-tab="settings">Paramètres</button>
+</div>
+<div id="tab-discovery" class="tabpage">
+<div class="panel">
+<div class="small muted">Morceau en cours</div><h3 id="current">Chargement…</h3>
+<button class="secondary" id="refresh">Actualiser</button>
+</div>
+<div class="panel">
+<div class="row">
+<div><label for="mode">Recherche</label><select id="mode">
+<option value="auto">Automatique</option><option value="track">Morceaux similaires</option><option value="artist">Artistes similaires</option><option value="topArtist">Top titres de l’artiste</option>
+</select></div>
+<div><label for="target">Titres souhaités</label><input type="number" id="target" min="1" max="200" value="50"></div>
+<div><label for="threshold">Score minimum (%)</label><input type="number" id="threshold" min="0" max="100" value="10"></div>
+<div id="surpriseBox"><label for="surprise">Surprise (0–100)</label><input type="range" id="surprise" min="0" max="100" step="5" value="40"><span id="surpriseValue">40</span></div>
+<div id="topArtistOptions" hidden><label for="topOrder">Ordre du Top artiste</label><select id="topOrder"><option value="popular">Popularité décroissante</option><option value="random">Aléatoire</option></select><label><input type="checkbox" id="topVersions"> Inclure plusieurs versions du même morceau</label></div>
+</div>
+<div class="small muted" style="margin-top:10px">Seuls les titres présents dans ta bibliothèque sont sélectionnés. Aucun filtre de codec. Nouvelle sélection à chaque recherche : le curseur Surprise favorise des titres moins attendus.</div>
+<div class="actions"><button id="search">Rechercher</button><button id="create" disabled>Créer la playlist</button></div>
+</div>
+<div class="panel">
+<strong>Bilan</strong><p id="status" class="small muted">Prêt.</p>
+<div id="summary" class="small muted"></div>
+</div>
+<div class="panel"><strong>Sélection</strong><div id="results"></div></div>
+<div class="panel">
+<strong>Ce qui manque dans ta bibliothèque</strong>
+<div class="small muted" style="margin-top:6px">Ces résultats viennent de Last.fm. Ils ne seront jamais ajoutés à la playlist.</div>
+<div class="row" style="margin-top:8px">
+<label><input type="checkbox" id="showMissingArtists"> Afficher les artistes absents</label>
+<label><input type="checkbox" id="showMissingTracks"> Afficher les titres absents</label>
+</div>
+<div id="missingOverview" class="small muted" style="margin:10px 0">Lance une recherche pour obtenir le bilan des absences.</div>
+<div id="missingArtistsPanel" hidden><h3>Artistes absents de Foobar</h3><div id="missingArtists" class="absent-list"></div></div>
+<div id="missingTracksPanel" hidden><h3>Titres recommandés introuvables</h3><div class="small muted">Un artiste peut être présent alors que le titre recommandé ne l'est pas.</div><div id="missingTracks" class="absent-list"></div></div>
+</div>
+</div>
+<div id="tab-tags" class="tabpage" hidden>
+<div class="panel"><h3>Radio par tags</h3><label for="tagInput">Tags Last.fm, séparés par des virgules</label><input id="tagInput" type="text" placeholder="ambient, jazz, experimental"><p class="notice">Un tag peut contenir plusieurs mots : « black metal », « modern classical »… Six tags maximum.</p>
+<div class="row"><div><label for="tagMode">Chercher les tags</label><select id="tagMode"><option value="artists">Par artistes</option><option value="tracks">Par morceaux</option></select></div><div><label for="tagCombine">Combinaison</label><select id="tagCombine"><option value="any">Au moins un tag</option><option value="all">Tous les tags</option></select></div><div><label for="tagOrder">Privilégier</label><select id="tagOrder"><option value="affinity">Affinité avec les tags</option><option value="popular">Les plus écoutés</option></select></div></div>
+<div class="row"><div><label for="tagTarget">Titres souhaités</label><input id="tagTarget" type="number" min="1" max="200" value="50"></div><div><label for="tagMaximum">Maximum par artiste</label><input id="tagMaximum" type="number" min="1" max="20" value="3"></div><div><label for="tagSurprise">Surprise : <span id="tagSurpriseValue">40</span> / 100</label><input id="tagSurprise" type="range" min="0" max="100" step="5" value="40"></div></div>
+<p class="notice">0 : priorité au classement choisi. 100 : tirage plus ouvert dans un réservoir élargi. Seuls les titres de ta bibliothèque sont retenus. Aucun morceau en cours n’est nécessaire.</p>
+<details><summary>Étendue de la recherche</summary><label for="tagBudget">Artistes ou morceaux à examiner au maximum</label><input id="tagBudget" type="number" min="10" max="300" value="80"><p class="notice">Par artistes : les tags décrivent l’artiste, pas nécessairement chacun de ses morceaux. Par morceaux : seuls les tags du titre sont utilisés, sans remplacement par ceux de l’artiste. « Tous les tags » vérifie leur présence parmi les tags principaux renvoyés par Last.fm. Les recherches composées (exemple : jazz punk, punk jazz) servent à découvrir des candidats supplémentaires ; un tag composé couvrant les termes demandés est également accepté (jazz punk, punk jazz ou jazz-punk pour jazz + punk). Les candidats communs sont examinés en priorité, avant application de la surprise dans chaque groupe. Le croisement reste limité aux candidats examinés. Le score d’affinité est un calcul de sélection, pas un nombre de votes ni une probabilité.</p></details>
+<div class="actions"><button id="tagSearch">Rechercher</button><button id="tagStop" class="secondary" disabled>Arrêter</button><button id="tagCreate" disabled>Créer la playlist</button></div></div>
+<div class="panel"><p id="tagStatus" class="small muted">Prêt.</p><div id="tagSummary" class="small muted" style="white-space:pre-wrap;line-height:1.6"></div></div><div class="panel"><strong>Sélection</strong><div id="tagResults" style="max-height:55vh;overflow:auto"></div></div><details class="panel" id="tagMissingPanel" open><summary>Principaux artistes absents<span id="tagMissingCount"></span></summary><p class="notice">Artistes correspondant aux tags recherchés, mais non retrouvés dans la bibliothèque. Classement par affinité puis présence dans les listes Last.fm ; 20 noms maximum. Les variantes de nom peuvent affecter la détection.</p><div id="tagMissingArtists" class="absent-list">Lance une recherche pour afficher les artistes absents.</div></details></div>
+
+<div id="tab-friends" class="tabpage" hidden>
+<div class="panel">
+<strong>Les goûts de mes contacts Last.fm</strong>
+<p class="notice">Ton propre compte figure en tête de liste. Seuls les titres présents dans Foobar pourront entrer dans la playlist.</p>
+<div class="actions"><button id="loadFriends" class="secondary">Actualiser les personnes suivies</button></div>
+<details class="panel" open><summary><strong>Découvrir les profils compatibles</strong></summary>
+<p class="notice">Réseau des abonnements uniquement. Les scores sont calculés à partir des artistes communs, et ne correspondent pas aux scores du site Last.fm. Le niveau 3 peut être lent.</p>
+<div class="row"><div><label for="networkDepth">Profondeur du réseau</label><select id="networkDepth"><option value="1">1 · Mes abonnements</option><option value="2" selected>2 · Abonnements de mes contacts</option><option value="3">3 · Réseau étendu</option></select></div>
+<div><label for="networkCap">Profils maximum</label><input type="number" id="networkCap" min="20" max="500" value="200"></div>
+<div><label for="compareCap">Profils à comparer</label><input type="number" id="compareCap" min="10" max="250" value="100"></div></div>
+<div class="row"><div><label for="activityMonths">Dernière écoute · filtre</label><select id="activityMonths"><option value="0">Ne pas filtrer</option><option value="1">1 mois</option><option value="3">3 mois</option><option value="6" selected>6 mois</option><option value="12">12 mois</option><option value="24">24 mois</option></select></div><div><label><input type="checkbox" id="showInactive"> Afficher aussi les profils exclus</label></div></div><p class="notice">Une activité inconnue n'entraîne pas d'exclusion. Les dates vérifiées sont conservées temporairement en mémoire.</p>
+<div class="actions"><button id="networkSearch" class="secondary">Trouver les profils compatibles</button><button id="networkStop" class="secondary" disabled>Arrêter</button></div>
+<p id="networkStatus" class="small muted">Aucune exploration effectuée.</p>
+<div id="networkResults" style="max-height:310px;overflow:auto"></div>
+</details>
+<label for="friend">Personne</label><select id="friend" style="width:100%"><option value="">Configurer d'abord mon compte Last.fm</option></select>
+<div id="friendProfileLink" class="small muted" style="margin-top:6px"></div><label for="friendType">Playlist</label><select id="friendType"><option value="loved">Morceaux aimés ♥</option><option value="top">Morceaux les plus joués</option></select>
+<div id="friendPeriodBox" hidden><label for="friendPeriod">Période des écoutes</label><select id="friendPeriod">
+<option value="7day">7 derniers jours</option><option value="1month">Dernier mois</option><option value="3month">3 derniers mois</option><option value="6month">6 derniers mois</option><option value="12month">12 derniers mois</option><option value="overall">Depuis toujours</option>
+</select></div>
+<div class="row"><div><label for="friendTarget">Titres souhaités</label><input id="friendTarget" type="number" min="1" max="200" value="50"></div>
+<div><label for="friendPages">Pages maximum</label><input id="friendPages" type="number" min="1" max="50" value="10"></div></div>
+<p class="notice">Chaque page contient jusqu'à 200 entrées Last.fm. La recherche progresse jusqu'au nombre de titres locaux souhaités ou jusqu'à la limite choisie. Les titres sont conservés dans l'ordre des favoris / écoutes, sans tirage aléatoire.</p>
+<div class="actions"><button id="friendSearch">Rechercher dans Foobar</button><button id="friendCreate" disabled>Créer la playlist</button></div>
+</div>
+<div class="panel"><strong>Bilan</strong><p id="friendStatus" class="small muted">Prêt.</p><div id="friendSummary" class="small muted"></div></div>
+<div class="panel"><strong>Sélection</strong><div id="friendResults"></div></div>
+<details class="panel"><summary>Titres absents du classement examiné</summary><p class="notice">Ces titres ne sont pas ajoutés à la playlist. Les variantes de nom peuvent fausser la détection.</p><div id="friendMissing" class="absent-list"></div></details>
+</div>
+<div id="tab-genres" class="tabpage" hidden><section class="panel"><h3>Genres et pays des albums sélectionnés</h3><p class="notice">Sélectionne une ou plusieurs pistes par album dans Foobar. Les albums de la bibliothèque sont traités en entier : le nombre de pistes figure dans l’aperçu. Hors bibliothèque, sélectionne un album complet à la fois. Aucun fichier n’est modifié avant Ajouter ou Remplacer.</p><label>Genres présélectionnés <select id="genreLimit"><option>3</option><option>4</option><option>5</option></select></label><label><input type="checkbox" id="genreFallback" checked> Utiliser les tags de l’artiste si ceux de l’album ne conviennent pas</label><div class="actions"><button id="genreSearch">Analyser la sélection</button><button id="genreClear" class="secondary">Annuler</button></div></section><div id="genreResults"></div><div class="panel"><div class="actions" aria-label="Écrire les valeurs sélectionnées"><button id="genreAdd">Ajouter GENRE</button><button id="genreReplace">Remplacer GENRE</button><button id="countryAdd">Ajouter COUNTRY</button><button id="countryReplace">Remplacer COUNTRY</button></div><p id="genreStatus" role="status" class="small muted">Sélectionne les albums puis lance l’analyse.</p></div></div>
+<div id="tab-settings" class="tabpage" hidden>
+<div class="panel"><label for="uiLanguage">Langue / Language</label><select id="uiLanguage"><option value="fr">Français</option><option value="en">English</option></select><p class="notice" id="languageNote">Le changement de langue recharge le panneau. Les paramètres sont conservés ; l’aperçu sera réinitialisé.</p></div><div class="panel"><strong>Connexion Last.fm</strong>
+<label for="username">Mon identifiant Last.fm</label><input type="text" id="username" autocomplete="username" placeholder="Par exemple : votre_identifiant">
+<label for="key">Clé API Last.fm</label><input type="password" id="key" autocomplete="off" placeholder="Clé API personnelle">
+<p class="notice">Paramètres enregistrés localement dans WebView2, jamais dans le fichier HTML distribué. Le Shared Secret n'est pas nécessaire. La clé reste accessible au JavaScript de ce panneau : utilise uniquement un fichier HTML de confiance.</p>
+<div class="actions"><button id="saveSettings">Enregistrer</button></div><p id="settingsStatus" class="small muted"></p>
+</div></div>
+<script>
+const UI_EN={"Découverte":"Discovery","Utilisateurs":"Users","Paramètres":"Settings","Morceau en cours":"Now playing","Chargement…":"Loading…","Actualiser":"Refresh","Recherche":"Search","Automatique":"Automatic","Morceaux similaires":"Similar tracks","Artistes similaires":"Similar artists","Top titres de l’artiste":"Artist top tracks","Titres souhaités":"Requested tracks","Score minimum (%)":"Minimum score (%)","Surprise (0–100)":"Surprise (0–100)","Ordre du Top artiste":"Artist top-track order","Popularité décroissante":"Most popular first","Aléatoire":"Random","Inclure plusieurs versions du même morceau":"Include multiple versions of the same track","Seuls les titres présents dans ta bibliothèque sont sélectionnés. Aucun filtre de codec. Nouvelle sélection à chaque recherche : le curseur Surprise favorise des titres moins attendus.":"Only tracks in your library are selected. No codec filter. Each search creates a new selection: Surprise favours less predictable tracks.","Rechercher":"Search","Créer la playlist":"Create playlist","Bilan":"Summary","Prêt.":"Ready.","Sélection":"Selection","Ce qui manque dans ta bibliothèque":"Missing from your library","Ces résultats viennent de Last.fm. Ils ne seront jamais ajoutés à la playlist.":"These results come from Last.fm. They will never be added to the playlist.","Afficher les artistes absents":"Show missing artists","Afficher les titres absents":"Show missing tracks","Lance une recherche pour obtenir le bilan des absences.":"Run a search to see what is missing.","Artistes absents de Foobar":"Artists missing from Foobar","Titres recommandés introuvables":"Recommended tracks not found","Un artiste peut être présent alors que le titre recommandé ne l'est pas.":"An artist may be present while the recommended track is missing.","Radio par tags":"Tag radio","Tags Last.fm, séparés par des virgules":"Last.fm tags, separated by commas","Un tag peut contenir plusieurs mots : « black metal », « modern classical »… Six tags maximum.":"Tags can contain several words: “black metal”, “modern classical”… Up to six tags.","Chercher les tags":"Search tags","Par artistes":"By artist","Par morceaux":"By track","Combinaison":"Combination","Au moins un tag":"Any tag","Tous les tags":"All tags","Privilégier":"Prefer","Affinité avec les tags":"Tag affinity","Les plus écoutés":"Most played","Maximum par artiste":"Maximum per artist","Surprise :":"Surprise:","0 : priorité au classement choisi. 100 : tirage plus ouvert dans un réservoir élargi. Seuls les titres de ta bibliothèque sont retenus. Aucun morceau en cours n’est nécessaire.":"0: prioritise the chosen ranking. 100: broader sampling from a larger pool. Only tracks in your library are selected. Playback is not required.","Étendue de la recherche":"Search scope","Artistes ou morceaux à examiner au maximum":"Maximum artists or tracks to examine","Arrêter":"Stop","Principaux artistes absents":"Top missing artists","Artistes correspondant aux tags recherchés, mais non retrouvés dans la bibliothèque. Classement par affinité puis présence dans les listes Last.fm ; 20 noms maximum. Les variantes de nom peuvent affecter la détection.":"Artists matching the requested tags but not found in your library. Ranked by affinity, then Last.fm chart presence; up to 20 names. Name variants may affect detection.","Lance une recherche pour afficher les artistes absents.":"Run a search to show missing artists.","Les goûts de mes contacts Last.fm":"My Last.fm contacts’ tastes","Ton propre compte figure en tête de liste. Seuls les titres présents dans Foobar pourront entrer dans la playlist.":"Your account appears first. Only tracks present in Foobar can enter the playlist.","Actualiser les personnes suivies":"Refresh followed users","Découvrir les profils compatibles":"Find compatible profiles","Réseau des abonnements uniquement. Les scores sont calculés à partir des artistes communs, et ne correspondent pas aux scores du site Last.fm. Le niveau 3 peut être lent.":"Following network only. Scores are based on shared artists and differ from Last.fm website scores. Level 3 can be slow.","Profondeur du réseau":"Network depth","1 · Mes abonnements":"1 · People I follow","2 · Abonnements de mes contacts":"2 · People my contacts follow","3 · Réseau étendu":"3 · Extended network","Profils maximum":"Maximum profiles","Profils à comparer":"Profiles to compare","Dernière écoute · filtre":"Last played · filter","Ne pas filtrer":"Do not filter","1 mois":"1 month","3 mois":"3 months","6 mois":"6 months","12 mois":"12 months","24 mois":"24 months","Afficher aussi les profils exclus":"Also show excluded profiles","Une activité inconnue n'entraîne pas d'exclusion. Les dates vérifiées sont conservées temporairement en mémoire.":"Unknown activity does not exclude a profile. Checked dates are temporarily cached in memory.","Trouver les profils compatibles":"Find compatible profiles","Aucune exploration effectuée.":"No exploration performed.","Personne":"User","Configurer d'abord mon compte Last.fm":"Configure my Last.fm account first","Morceaux aimés ♥":"Loved tracks ♥","Morceaux les plus joués":"Most played tracks","Période des écoutes":"Listening period","7 derniers jours":"Last 7 days","Dernier mois":"Last month","3 derniers mois":"Last 3 months","6 derniers mois":"Last 6 months","12 derniers mois":"Last 12 months","Depuis toujours":"All time","Pages maximum":"Maximum pages","Chaque page contient jusqu'à 200 entrées Last.fm. La recherche progresse jusqu'au nombre de titres locaux souhaités ou jusqu'à la limite choisie. Les titres sont conservés dans l'ordre des favoris / écoutes, sans tirage aléatoire.":"Each page contains up to 200 Last.fm entries. Searching continues until the requested local track count or the selected limit is reached. Tracks retain their favourites / play-count order without random sampling.","Rechercher dans Foobar":"Search in Foobar","Titres absents du classement examiné":"Tracks missing from the examined chart","Ces titres ne sont pas ajoutés à la playlist. Les variantes de nom peuvent fausser la détection.":"These tracks are not added to the playlist. Name variants may affect detection.","Genres et pays des albums sélectionnés":"Genres and countries of selected albums","Sélectionne une ou plusieurs pistes par album dans Foobar. Les albums de la bibliothèque sont traités en entier : le nombre de pistes figure dans l’aperçu. Hors bibliothèque, sélectionne un album complet à la fois. Aucun fichier n’est modifié avant Ajouter ou Remplacer.":"Select one or more tracks per album in Foobar. Library albums are processed in full: the preview shows the track count. Outside the library, select one complete album at a time. No file is modified until you choose Add or Replace.","Genres présélectionnés":"Preselected genres","Utiliser les tags de l’artiste si ceux de l’album ne conviennent pas":"Use artist tags if album tags are unsuitable","Analyser la sélection":"Analyse selection","Annuler":"Cancel","Ajouter GENRE":"Add GENRE","Remplacer GENRE":"Replace GENRE","Ajouter COUNTRY":"Add COUNTRY","Remplacer COUNTRY":"Replace COUNTRY","Sélectionne les albums puis lance l’analyse.":"Select albums, then run the analysis.","Écrire les valeurs sélectionnées":"Write selected values","Connexion Last.fm":"Last.fm connection","Mon identifiant Last.fm":"My Last.fm username","Par exemple : votre_identifiant":"For example: your_username","Clé API Last.fm":"Last.fm API key","Clé API personnelle":"Personal API key","Paramètres enregistrés localement dans WebView2, jamais dans le fichier HTML distribué. Le Shared Secret n'est pas nécessaire. La clé reste accessible au JavaScript de ce panneau : utilise uniquement un fichier HTML de confiance.":"Settings are stored locally in WebView2, never in the distributed HTML file. A Shared Secret is not required. The key remains accessible to this panel’s JavaScript: only use trusted HTML files.","Enregistrer":"Save","Ouvrir sur Last.fm":"Open on Last.fm","Erreur Foobar : ":"Foobar error: "," (code ":" (code ","Aimé sur Last.fm":"Loved on Last.fm"," écoutes":" plays","rang Last.fm #":"Last.fm rank #","Aucun morceau local retenu.":"No local tracks selected."," artistes absents ; ":" missing artists; "," titres recommandés introuvables parmi les résultats examinés.":" recommended tracks missing from the examined results."," · similarité artiste ":" · artist similarity ","Aucun artiste absent identifié dans les résultats examinés.":"No missing artists identified in the examined results.","Artiste présent, titre absent":"Artist present, track missing","Artiste absent":"Artist missing","Affichage limité aux ":"Showing only the first "," premiers sur ":" out of "," titres absents.":" missing tracks.","Aucun titre absent parmi les recommandations examinées.":"No missing tracks among the examined recommendations.","Last.fm : recherche des artistes proches…":"Last.fm: searching for similar artists…","Exploration ":"Exploring "," titres locaux candidats":" local candidate tracks","Complément des discographies : ":"Additional discographies: "," (page ":" (page "," page ":" page ","Last.fm : morceaux similaires…":"Last.fm: similar tracks…","Recherche locale : ":"Local search: ","Top de ":"Top tracks for "," : page ":": page "," titres locaux…":" local tracks…","Clé API manquante.":"Missing API key.","Aucun titre en cours identifiable.":"No identifiable track is playing.","Mode automatique : ":"Automatic mode: "," titres directs. Recherche du complément chez les artistes similaires…":" direct tracks. Searching similar artists for more…","Automatique · hybride":"Automatic · hybrid"," titres sélectionnés.":" tracks selected."," Surprise : ":" Surprise: "," page(s) Last.fm consultée(s) ; ":" Last.fm page(s) checked; "," titres examinés ; ":" tracks examined; "," recherche(s) Foobar.":" Foobar search(es)."," Limite de pagination atteinte.":" Page limit reached."," titres issus des morceaux similaires ; ":" tracks from similar tracks; "," compléments issus des artistes similaires.\n":" additional tracks from similar artists.\n"," artistes explorés pour le complément.\n":" artists explored for additional tracks.\n"," recommandations directes examinées.\n":" direct recommendations examined.\n"," artistes explorés ; ":" artists explored; "," présents avec au moins un titre correspondant.\n":" present with at least one matching track.\n"," recommandations Last.fm examinées.\n":" Last.fm recommendations examined.\n"," titres locaux candidats ; ":" local candidate tracks; "," recherches Foobar.\n":" Foobar searches.\n","Élargissement jusqu’à ":"Expanded to "," artistes.\n":" artists.\n"," requête(s) Last.fm ignorée(s).":" Last.fm request(s) skipped.","Erreur : ":"Error: ","Impossible de déterminer un nom de playlist libre.":"Unable to find an unused playlist name.","Format de getPlaylistItems non reconnu : ":"Unrecognised getPlaylistItems format: ","Aimés":"Loved","Playlist introuvable après création.":"Playlist not found after creation.","Ordre incorrect à l’ajout ":"Incorrect order after addition "," : vérifie la playlist « ":": check playlist “","Ajout non confirmé : ":"Addition not confirmed: "," ajout(s) confirmés. Vérifier la playlist avant de recommencer.":" addition(s) confirmed. Check the playlist before trying again.","Création de « ":"Creating “","Vérification finale : l’ordre des fichiers diffère de la sélection.":"Final check: file order differs from the selection.","Playlist créée et ordre vérifié : ":"Playlist created and order verified: "," titres ajoutés.":" tracks added.","Erreur lors de la création : ":"Creation error: ","Renseigne ta clé API dans Paramètres.":"Enter your API key in Settings.","Renseigne ton identifiant Last.fm dans Paramètres.":"Enter your Last.fm username in Settings."," (moi)":" (me)","Lecture des comptes suivis : page ":"Reading followed accounts: page "," compte(s), toi compris.":" account(s), including you.","Aucune date d’écoute accessible":"No listening date available","Données non disponibles":"Data unavailable","Activité inconnue":"Unknown activity","Dernière écoute : ":"Last played: ","Choisir · ":"Choose · ","Sélectionner ce profil pour une playlist":"Select this profile for a playlist"," (réseau)":" (network)","Profil ":"Profile "," sélectionné. Choisis le type de playlist, puis recherche les titres dans Foobar.":" selected. Choose the playlist type, then search for tracks in Foobar."," artistes communs · niveau ":" shared artists · level ","Inactif · ":"Inactive · ","Activité inconnue · ":"Unknown activity · ","Actif · ":"Active · ","Aucun profil visible pour ce filtre.":"No profiles match this filter.","Réseau : niveau ":"Network: level "," profils candidats · ":" candidate profiles · "," requêtes en cache ou réseau":" cached or network requests","Exploration interrompue · ":"Exploration stopped · "," profils collectés.":" profiles collected.","Comparaison musicale des profils…":"Comparing profiles’ music…","Ton compte ne possède pas de classement d’artistes exploitable.":"Your account has no usable artist chart.","Compatibilité : ":"Compatibility: "," profils comparés…":" profiles compared…","Recherche interrompue. ":"Search stopped. "," profils découverts · ":" profiles discovered · "," comparés · ":" compared · "," indisponibles · ":" unavailable · "," inactifs exclus · ":" inactive excluded · "," activité inconnue · ":" unknown activity · "," classés. Sélectionne un profil pour créer sa playlist.":" ranked. Select a profile to create its playlist.","morceau aimé":"loved track","Aucun morceau trouvé dans Foobar.":"No tracks found in Foobar.","300 titres affichés sur ":"300 tracks displayed out of "," absents.":" missing.","Aucun titre absent parmi les résultats examinés.":"No missing tracks among the examined results.","Actualise d’abord la liste des personnes suivies.":"Refresh followed users first.","Compte ":"Account "," · page ":" · page "," titres trouvés":" tracks found"," morceaux locaux sélectionnés.":" local tracks selected."," page(s) Last.fm ; ":" Last.fm page(s); "," titres distincts examinés ; ":" distinct tracks examined; "," titres absents ; ":" missing tracks; "," recherches Foobar.":" Foobar searches.","Saisis au moins un tag.":"Enter at least one tag.","Six tags maximum par recherche.":"Up to six tags per search.","Recherche arrêtée.":"Search stopped.","Last.fm ne répond pas dans le délai prévu.":"Last.fm did not respond in time.","Croisement « ":"Combined search “","Tag « ":"Tag “"," » · page ":"” · page ","Vérification des tags ":"Checking tags "," (tag composé)":" (compound tag)"," écoutes Last.fm":" Last.fm plays","Aucun titre local retenu dans les résultats examinés.":"No local tracks selected from the examined results.","Aucun artiste correspondant identifié comme absent parmi les candidats examinés.":"No matching artist identified as missing among the examined candidates.","Les 20 premiers sur ":"Showing the first 20 of "," artistes absents vérifiés sont affichés.":" verified missing artists.","par artistes":"by artist","par morceaux":"by track","tous les tags":"all tags","au moins un tag":"any tag"," titres locaux sélectionnés · surprise ":" local tracks selected · surprise "," candidats Last.fm repérés (dont ":" Last.fm candidates found (including "," issus des recherches croisées) ; ":" from combined searches); "," candidats examinés ; ":" candidates examined; "," titres locaux candidats.\n":" local candidate tracks.\n"," requêtes ; ":" requests; "," réponses en cache. Résultats limités au réservoir examiné et à ":" cached responses. Results limited to the examined pool and "," titre(s) par artiste.":" track(s) per artist."," requête(s) non aboutie(s).":" failed request(s).","Arrêt demandé…":"Stop requested…","Il faut un identifiant et une clé API.":"A username and API key are required.","Enregistré localement. Actualise les personnes suivies dans l’onglet Utilisateurs.":"Saved locally. Refresh followed users in the Users tab.","Arrêt demandé, attente de la requête en cours…":"Stop requested, waiting for the current request…","Voir le profil ":"View profile ","nom de l’artiste ou de l’album":"artist or album name","année ou décennie":"year or decade","étiquette descriptive":"descriptive label","Lecture de sélection incohérente.":"Inconsistent selection data."," piste(s) · ":" track(s) · ","Tags de l’album":"Album tags","Tags de l’artiste":"Artist tags","GENRE actuel : ":"Current GENRE: ","Tags de l’album écartés":"Excluded album tags","Remplacer : ":"Replace: ","aucune écriture":"no changes","\nAjouter : ":"\nAdd: ","Renseigne la clé Last.fm dans Paramètres.":"Enter your Last.fm key in Settings.","Aucune playlist active.":"No active playlist.","Sélectionne des albums dans Foobar.":"Select albums in Foobar.","ARTISTE et ALBUM sont nécessaires pour chaque piste.":"ARTIST and ALBUM are required for each track.","Recherche ":"Searching ","Album hors bibliothèque : sélectionne cet album seul pour écrire ses genres.":"Album outside the library: select this album alone to write its genres.","pistes sélectionnées uniquement (hors bibliothèque)":"selected tracks only (outside the library)","album complet dans la bibliothèque":"complete album in the library","Album Last.fm":"Last.fm album","Artiste Last.fm (secours)":"Last.fm artist (fallback)","Artiste":"Artist","Aucun tag trouvé : cet album sera ignoré.":"No tags found: this album will be skipped.","Aperçu prêt. Vérifie les pistes et les genres puis choisis Ajouter ou Remplacer. Aucun tag écrit.":"Preview ready. Check the tracks and genres, then choose Add or Replace. No tags written.","Coche au moins une valeur dans un album.":"Select at least one value for an album.","Active Write files dans les propriétés WebView2.":"Enable Write files in WebView2 properties.","Les métadonnées ont changé depuis l’aperçu. Relance la recherche.":"Metadata changed since the preview. Run the search again.","Écriture et vérification : ":"Writing and checking: ","Écriture refusée par Foobar : ":"Foobar refused to write: ","Écriture demandée mais non confirmée après 30 secondes pour ":"Write requested but not confirmed after 30 seconds for ",". Vérifie ses propriétés avant de réessayer.":". Check its properties before trying again.","complété":"updated","remplacé":"replaced"," et relu sur ":" and verified on "," album(s).":" album(s)."," album(s) déjà écrit(s). ":" album(s) already written. ","Aperçu annulé.":"Preview cancelled.","Chargement des tags ":"Loading tags ","de l’artiste":"for the artist","de l’album":"for the album","Artiste Last.fm : ":"Last.fm artist: "," (choix manuel)":" (manual choice)","Album Last.fm (choix manuel)":"Last.fm album (manual choice)","Aucun tag trouvé pour cette source. Essaie l’autre bouton.":"No tags found for this source. Try the other button.","Tags chargés. Vérifie les cases puis choisis Ajouter ou Remplacer. Aucun tag écrit.":"Tags loaded. Check the boxes, then choose Add or Replace. No tags written.","pays proposé dans COUNTRY":"country suggested under COUNTRY","Pays proposés · COUNTRY":"Suggested countries · COUNTRY","Origine de l’artiste : les adjectifs peuvent aussi désigner une langue. Coche uniquement les pays à retenir.":"Artist origin: adjectives may also refer to a language. Select only the relevant countries.","COUNTRY actuel : ":"Current COUNTRY: ","Aucun pays reconnu dans les tags des artistes consultés. Essaie un artiste ci-dessus.":"No countries recognised in the queried artists’ tags. Try an artist above.","Pays : recherche des tags de ":"Countries: searching tags for ","Pays recherchés pour ":"Countries checked for ",". Vérifie les suggestions ; aucun tag écrit.":". Check the suggestions; no tags written.","Pays recherchés dans les tags d’artiste, indépendamment des genres de l’album.":"Countries are searched in artist tags, independently of album genres.","Nom exact de l’artiste sur Last.fm":"Exact artist name on Last.fm","Artiste à consulter pour ":"Artist to query for ","Chercher ses pays":"Find their countries","Genres de cet artiste":"Genres for this artist","Chercher les pays de tous les artistes proposés":"Find countries for all proposed artists","Artistes possibles à vérifier (un « & » peut aussi appartenir au nom d’un groupe) :":"Possible artists to check (“&” may also belong to a band name):","Genres : ":"Genres: ","Chercher les genres de tous les artistes proposés":"Find genres for all proposed artists","Pays : ":"Countries: "," artiste(s) consulté(s). Coche les pays à retenir ; aucun tag écrit.":" artist(s) queried. Select the relevant countries; no tags written.","\nÉchecs : ":"\nFailures: ","Artistes Last.fm : ":"Last.fm artists: ","Aucun genre trouvé pour ces artistes.":"No genres found for these artists."," artiste(s) consulté(s). Vérifie les genres puis choisis Ajouter ou Remplacer. Aucun tag écrit.":" artist(s) queried. Check the genres, then choose Add or Replace. No tags written.","Par artistes : les tags décrivent l’artiste, pas nécessairement chacun de ses morceaux. Par morceaux : seuls les tags du titre sont utilisés, sans remplacement par ceux de l’artiste. « Tous les tags » vérifie leur présence parmi les tags principaux renvoyés par Last.fm. Les recherches composées (exemple : jazz punk, punk jazz) servent à découvrir des candidats supplémentaires ; un tag composé couvrant les termes demandés est également accepté (jazz punk, punk jazz ou jazz-punk pour jazz + punk). Les candidats communs sont examinés en priorité, avant application de la surprise dans chaque groupe. Le croisement reste limité aux candidats examinés. Le score d’affinité est un calcul de sélection, pas un nombre de votes ni une probabilité.":"By artist: tags describe the artist, not necessarily each track. By track: only track tags are used, without falling back to artist tags. “All tags” checks the main tags returned by Last.fm. Combined searches (such as jazz punk or punk jazz) discover additional candidates; compound tags covering the requested terms are also accepted. Shared candidates are examined first, before applying Surprise within each group. Matching is limited to the examined candidates. Affinity is a selection score, not a vote count or probability.","Le changement de langue recharge le panneau. Les paramètres sont conservés ; l’aperçu sera réinitialisé.":"Changing language reloads the panel. Saved settings are retained; the preview will be cleared."};
+let UI_LANG='fr';try{UI_LANG=localStorage.getItem('lastfm.ui.language')==='en'?'en':'fr';}catch{}
+function uiText(text){return UI_LANG==='en'&&Object.hasOwn(UI_EN,text)?UI_EN[text]:text;}
+function uiStatic(){document.documentElement.lang=UI_LANG;const walker=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT);let n;while(n=walker.nextNode()){if(['SCRIPT','STYLE'].includes(n.parentElement?.tagName))continue;const original=n.nodeValue,key=original.trim();if(Object.hasOwn(UI_EN,key))n.nodeValue=original.replace(key,uiText(key));}for(const el of document.querySelectorAll('[placeholder],[title],[aria-label]'))for(const attr of ['placeholder','title','aria-label']){const v=el.getAttribute(attr);if(v&&Object.hasOwn(UI_EN,v))el.setAttribute(attr,uiText(v));}const select=document.getElementById('uiLanguage');select.value=UI_LANG;select.onchange=()=>{if(working){select.value=UI_LANG;return;}try{localStorage.setItem('lastfm.ui.language',select.value);}catch{document.getElementById('languageNote').textContent=UI_LANG==='en'?'Unable to save the language preference.':'Impossible de mémoriser la langue.';return;}location.reload();};}
+
+'use strict';
+// WebView2 foo_webview2 0.3.27 : API hôte testée sur la configuration de l'utilisateur.
+const api = chrome.webview.hostObjects.sync.foo_uie_webview;
+const $ = id => document.getElementById(id);
+const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+const unique = items => [...new Set(items)];
+const asArray = value => !value ? [] : Array.isArray(value) ? value : [value];
+// Normalisation symétrique : les comparaisons sont faites APRÈS la recherche Foobar.
+const normalize = value => String(value || '').normalize('NFD')
+  .replace(/[\u0300-\u036f]/g, '').toLowerCase()
+  .replace(/[’']/g, '').replace(/[^a-z0-9]/g, '');
+const safeQuery = value => String(value || '').replace(/"/g, '');
+const INITIAL_ARTICLE = /^(?:the|les|los|las|el|le|la|l|das|der|die|den|des|de|het|il|lo|gli|os|as|un|une)\s+/i;
+function plainText(value) {
+  return String(value||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase()
+    .replace(/[’‘]/g,"'").replace(/[‐‑–—]/g,'-').replace(/\s+/g,' ').trim();
+}
+function wordsKey(value) {
+  return plainText(value).replace(/&/g,' and ').replace(/\band\b/g,' and ')
+    .replace(/[^a-z0-9]+/g,' ').trim().replace(/\s+/g,'');
+}
+function simplifiedArtist(value) {
+  let s=plainText(value)
+    .replace(/\s*[([{][^\]})]*[\]})]/g,' ')
+    .replace(/\s+(?:feat(?:uring)?\.?|ft\.?|avec|w\/)\s+.*$/i,'')
+    .replace(INITIAL_ARTICLE,'');
+  return wordsKey(s);
+}
+function simpleTitle(value) {
+  let s=plainText(value);
+  // Les sous-titres comme « (Darling Boy) » restent intacts.
+  s=s.replace(/\s+(?:feat(?:uring)?\.?|ft\.?)\s+.*$/i,'');
+  s=s.replace(/\s*-\s*(?:\d{4}\s*(?:-\s*)?)?(?:digital(?:ly)?\s+)?re-?master(?:ed)?(?:\s*(?:-\s*|in\s+)?\d{4})?\s*$/i,'');
+  s=s.replace(/\s*-\s*ultimate\s+mix\s*$/i,'');
+  s=s.replace(/\s*[([{]([^\]})]*)[\]})]/g,(full,content)=>
+    /^(?:(?:\d{4}\s*)?re-?master(?:ed)?(?:\s*\d{4})?|album version|original version|single version|radio edit|edit)$/i.test(content.trim())?'':full);
+  return wordsKey(s);
+}
+function searchTokens(value) {
+  const s=plainText(value).replace(/\s*[([{][^\]})]*[\]})]/g,' ')
+    .replace(/\s+(?:feat(?:uring)?\.?|ft\.?|avec|w\/)\s+.*$/i,'')
+    .replace(INITIAL_ARTICLE,'').replace(/&/g,' and ');
+  return s.replace(/[^a-z0-9]+/g,' ').split(/\s+/).filter(w=>w.length>=3);
+}
+function artistEquals(a,b) {
+  return normalize(a)===normalize(b) || simplifiedArtist(a)===simplifiedArtist(b);
+}
+function artistCreditMatches(credit, artist) {
+  if(artistEquals(credit,artist))return true;
+  // Les crédits collectifs sont des indices SECONDAIRES, pas des équivalences d'artiste principal.
+  const parts=String(credit||'').split(/\s*(?:;|\s+\/\s+|\s+\+\s+|\s+with\s+|\s+feat(?:uring)?\.?\s+|\s+ft\.?\s+)\s*/i);
+  return parts.length>1 && parts.some(part=>artistEquals(part,artist));
+}
+const lastUrl = {
+  user:name=>'https://www.last.fm/user/'+encodeURIComponent(name),
+  artist:name=>'https://www.last.fm/music/'+encodeURIComponent(name),
+  track:(artist,title)=>'https://www.last.fm/music/'+encodeURIComponent(artist)+'/_/'+encodeURIComponent(title)
+};
+function linkTo(text,url){
+  const a=document.createElement('a');a.className='lastlink';a.href=url;a.textContent=text;
+  a.target='_blank';a.rel='noopener noreferrer';a.title=uiText("Ouvrir sur Last.fm");return a;
+}
+function trackLinks(artist,title,prefix=''){
+  const span=document.createElement('span');
+  if(prefix)span.append(document.createTextNode(prefix));
+  span.append(linkTo(artist,lastUrl.artist(artist)),document.createTextNode(' - '),linkTo(title,lastUrl.track(artist,title)));
+  return span;
+}
+
+function clampNumber(value, min, max, fallback) {
+  const n = Number(value);
+  return Number.isFinite(n) ? Math.max(min, Math.min(max, Math.round(n))) : fallback;
+}
+function setStatus(text, error=false) {
+  $('status').textContent = text;
+  $('status').className = error ? 'small error' : 'small muted';
+}
+let working=false, selection=[], source=null, searchMode='', latestStats={}, missingArtists=[], missingTracks=[];
+function setWorking(value) {
+  working=value;document.getElementById('uiLanguage').disabled=value;
+  $('search').disabled=value;
+  $('refresh').disabled=value;
+  $('create').disabled=value || !selection.length || searchMode==='tags' || searchMode==='friend';
+  $('tagSearch').disabled=value;$('tagStop').disabled=!value||!tagSearching;$('tagCreate').disabled=value||!selection.length||searchMode!=='tags';
+  $('friendSearch').disabled=value; $('loadFriends').disabled=value; $('friendCreate').disabled=value || !selection.length || searchMode!=='friend'; $('networkSearch').disabled=value;
+}
+async function getCurrent() {
+  const artist=await fb2k.invoke('playback.getFormattedText',{text:'%artist%'});
+  const title=await fb2k.invoke('playback.getFormattedText',{text:'%title%'});
+  return {artist:String(artist||''), title:String(title||'')};
+}
+async function refreshCurrent() {
+  try { const t=await getCurrent(); $('current').textContent=(t.artist+' - '+t.title).trim(); }
+  catch(e) {setStatus(uiText("Erreur Foobar : ")+(e.message||String(e)),true);}
+}
+async function lastfm(method,params,key) {
+  const query=new URLSearchParams({method,...params,api_key:key,format:'json',autocorrect:'1'});
+  const response=await fetch('https://ws.audioscrobbler.com/2.0/?'+query);
+  if(!response.ok) throw new Error('Last.fm HTTP '+response.status);
+  const result=await response.json();
+  if(result.error) throw new Error('Last.fm : '+result.message+' (code '+result.error+')');
+  return result;
+}
+// Cache par recherche. Candidats obtenus avec des requêtes Foobar ciblées,
+// puis comparés dans JavaScript (jamais un HAS sur un prénom isolé).
+function makeLibraryMatcher() {
+  const artistCache=new Map();
+  let searches=0;
+  function readArtist(artist) {
+    const key=plainText(artist);
+    if(artistCache.has(key))return artistCache.get(key);
+    const tracks=new Map(), seenPaths=new Set();
+    const tokens=searchTokens(artist);
+    const phrases=[];
+    const full=plainText(artist).replace(/"/g,'');
+    const noArticle=full.replace(INITIAL_ARTICLE,'');
+    for(const phrase of [full,noArticle,
+      full.replace(/&/g,' and '),full.replace(/\band\b/g,'&'),
+      noArticle.replace(/&/g,' and '),noArticle.replace(/\band\b/g,'&')]) {
+      if(phrase)phrases.push(phrase);
+    }
+    // Repli sur une expression caractéristique (les formes locales peuvent
+    // différer par l'article, & / and, ou une collaboration avec 'with').
+    if(tokens.length>=2) {
+      phrases.push(tokens.slice(0,2).join(' '));
+      phrases.push(tokens.slice(-2).join(' '));
+    }
+    // Un seul mot discriminant reste admis, mais jamais un simple prénom courant.
+    if(tokens.length) {
+      const longest=tokens.filter(w=>w.length>=5).sort((a,b)=>b.length-a.length)[0];
+      if(longest)phrases.push(longest);
+    }
+    const queries=[];
+    for(const phrase of [...new Set(phrases)]) {
+      if(phrase.length<4)continue;
+      for(const field of ['artist','album artist']) {
+        queries.push(field+' HAS "'+safeQuery(phrase)+'"');
+      }
+    }
+    // Limite protectrice : ne jamais rechercher dans l'ensemble des 400 000 fichiers.
+    for(const query of queries.slice(0,24)) {
+      let list=0;
+      try {
+        list=api.searchLibrary(query);searches++;
+        const count=api.getMetaDBHandleListCount(list);
+        if(count>5000)continue;
+        for(let i=0;i<count;i++) {
+          const handle=api.getMetaDBHandleListItem(list,i);
+          const raw=api.formatMetaDBHandleTitle(handle,'%artist%\u001f%album artist%\u001f%title%\u001f%codec%');
+          const fields=String(raw).split('\u001f');
+          if(!artistCreditMatches(fields[0],artist) && !artistCreditMatches(fields[1],artist))continue;
+          const titleKey=simpleTitle(fields[2]);
+          if(!titleKey)continue;
+          const path=String(api.getMetaDBHandlePath(handle));
+          if(!path || seenPaths.has(path))continue;
+          seenPaths.add(path);
+          if(!tracks.has(titleKey))tracks.set(titleKey,[]);
+          tracks.get(titleKey).push({path,codec:fields[3]||'?'});
+        }
+      }finally {if(list)api.releaseMetaDBHandleList(list);}
+    }
+    for(const versions of tracks.values())versions.sort((a,b)=>a.path.localeCompare(b.path));
+    artistCache.set(key,tracks);
+    return tracks;
+  }
+  function match(artist,title) {return readArtist(artist).get(simpleTitle(title))||[];}
+  function hasArtist(artist) {return readArtist(artist).size>0;}
+  return {match,hasArtist,get searches(){return searches;}};
+}
+function candidate(artist,title,score,matcher) {
+  if(!artist || !title) return null;
+  const versions=matcher.match(artist,title);
+  if(!versions.length) return null;
+  return {artist,title,score:Math.max(0,Number(score)||0),
+    path:versions[0].path, versions:versions.length,
+    codecs:unique(versions.map(x=>x.codec))};
+}
+// Tirage pondéré sans remplacement. Surprise=0 favorise fortement les scores élevés ;
+// Surprise=100 explore davantage la réserve, sans ignorer complètement la pertinence.
+// Surprise : zone de popularité privilégiée dans le Top 100 d'un artiste.
+// Bornes interpolées, jamais un filtre strict. On explore hors plage si nécessaire.
+function popularityRange(surprise) {
+  const anchors=[[0,1,3],[25,1,30],[50,10,60],[75,20,85],[100,30,100]];
+  for(let i=1;i<anchors.length;i++) {
+    if(surprise<=anchors[i][0]) {
+      const a=anchors[i-1],b=anchors[i],f=(surprise-a[0])/(b[0]-a[0]);
+      return [a[1]+(b[1]-a[1])*f,a[2]+(b[2]-a[2])*f];
+    }
+  }
+  return [30,100];
+}
+function weightedPick(items,surprise) {
+  if(items.length===1) return items.splice(0,1)[0];
+  const max=Math.max(1,...items.map(t=>t.score));
+  const exponent=3.5-(surprise/100)*3.2;
+  const [low,high]=popularityRange(surprise);
+  const weights=items.map(t=>{
+    if(t.source==='artist' && Number.isFinite(t.rank)) {
+      const distance=t.rank<low?low-t.rank:t.rank>high?t.rank-high:0;
+      // L'extérieur de la plage reste possible, et les rangs dans la plage
+      // restent tirés aléatoirement (pas une position cible rigide).
+      const width=Math.max(10,(high-low)*.4);
+      return 0.08+0.92*Math.exp(-.5*Math.pow(distance/width,2));
+    }
+    return Math.pow(Math.max(.001,t.score/max),exponent);
+  });
+  let roll=Math.random()*weights.reduce((a,b)=>a+b,0);
+  for(let i=0;i<items.length;i++) {
+    roll-=weights[i];
+    if(roll<=0) return items.splice(i,1)[0];
+  }
+  return items.pop();
+}
+// Répartition équitable : on favorise les artistes encore peu sélectionnés,
+// puis le tirage pondéré à l'intérieur de chaque artiste. Aucune limite fixe.
+function diversified(groups,target,surprise) {
+  const pools=groups.filter(g=>g.tracks.length).map(g=>({
+    artist:g.artist,weight:Math.max(.001,g.weight||0),
+    tracks:g.tracks.slice(),used:0
+  }));
+  const picked=[],seenPaths=new Set(),seenIds=new Set();
+  let lastArtist='';
+  while(picked.length<target) {
+    const eligible=pools.filter(g=>g.tracks.some(t=>
+      !seenPaths.has(t.path) && !seenIds.has(normalize(t.artist)+'|'+normalize(t.title))));
+    if(!eligible.length) break;
+    const minUsed=Math.min(...eligible.map(g=>g.used));
+    let options=eligible.filter(g=>g.used===minUsed);
+    const other=options.filter(g=>normalize(g.artist)!==lastArtist);
+    if(other.length)options=other;
+    // Variation contrôlée : artistes similaires restent un peu prioritaires.
+    const maxWeight=Math.max(...options.map(g=>g.weight));
+    const weightPower=2.2-(surprise/100)*1.9;
+    const weights=options.map(g=>Math.pow(g.weight/maxWeight,weightPower));
+    let roll=Math.random()*weights.reduce((a,b)=>a+b,0),group=options[options.length-1];
+    for(let i=0;i<options.length;i++) {roll-=weights[i];if(roll<=0){group=options[i];break;}}
+    let item;
+    while(group.tracks.length) {
+      const t=weightedPick(group.tracks,surprise);
+      if(!seenPaths.has(t.path)&&!seenIds.has(normalize(t.artist)+'|'+normalize(t.title))) {item=t;break;}
+    }
+    if(!item)continue;
+    picked.push(item);group.used++;lastArtist=normalize(item.artist);
+    seenPaths.add(item.path);seenIds.add(normalize(item.artist)+'|'+normalize(item.title));
+  }
+  return picked;
+}
+// Mélange d'une sélection déjà constituée, sans modifier les titres retenus.
+function mixOrder(items,surprise) {
+  const remaining=items.slice(),out=[];
+  let last='';
+  while(remaining.length) {
+    let options=remaining.filter(t=>normalize(t.artist)!==last);
+    if(!options.length) options=remaining;
+    // Une petite fenêtre de tête assure de la variété tout en favorisant les scores.
+    const chosen=weightedPick(options.slice(),surprise);
+    const idx=remaining.indexOf(chosen);
+    remaining.splice(idx,1);out.push(chosen);last=normalize(chosen.artist);
+  }
+  return out;
+}
+function draw() {
+  const container=$('results');container.replaceChildren();
+  for(const [i,t] of selection.entries()) {
+    const row=document.createElement('div');row.className='track';
+    const title=document.createElement('strong');title.appendChild(trackLinks(t.artist,t.title,(i+1)+'. '));
+    const details=document.createElement('div');details.className='small ok';
+    details.textContent=t.versions+' version(s) ('+t.codecs.join(', ')+') · '+(searchMode==='friend' ? (t.playcount===null?uiText("Aimé sur Last.fm"):t.playcount+uiText(" écoutes")) : searchMode==='topArtist' ? (uiText("rang Last.fm #")+t.rank+(t.playcount!==null&&t.playcount!==undefined?' · '+t.playcount+uiText(" écoutes"):'')) : 'score '+t.score.toFixed(1)+' %');
+    row.append(title,details);container.appendChild(row);
+  }
+  if(!selection.length) container.textContent=uiText("Aucun morceau local retenu.");
+}
+// Absences : on conserve les observations Last.fm, indépendamment du tirage des playlists.
+function pushMissingTrack(output,artist,title,score,artistPresent) {
+  if(!artist||!title)return;
+  const id=normalize(artist)+'|'+normalize(title);
+  if(!output.missingKeys.has(id)) {
+    output.missingKeys.add(id);
+    output.missingTracks.push({artist,title,score,artistPresent});
+  }
+}
+function drawMissing() {
+  $('missingArtistsPanel').hidden=!$('showMissingArtists').checked;
+  $('missingTracksPanel').hidden=!$('showMissingTracks').checked;
+  $('missingArtists').replaceChildren();$('missingTracks').replaceChildren();
+  $('missingOverview').textContent=missingArtists.length+uiText(" artistes absents ; ")+missingTracks.length+uiText(" titres recommandés introuvables parmi les résultats examinés.");
+  if($('showMissingArtists').checked) {
+    for(const a of missingArtists) {
+      const div=document.createElement('div');div.className='absent-row';
+      div.append(linkTo(a.name,lastUrl.artist(a.name)),document.createTextNode(uiText(" · similarité artiste ")+(100*a.weight).toFixed(1)+' %'));
+      $('missingArtists').appendChild(div);
+    }
+    if(!missingArtists.length)$('missingArtists').textContent=uiText("Aucun artiste absent identifié dans les résultats examinés.");
+  }
+  if($('showMissingTracks').checked) {
+    const order=missingTracks.slice().sort((a,b)=>b.score-a.score);
+    const maximum=300;
+    for(const t of order.slice(0,maximum)) {
+      const div=document.createElement('div');div.className='absent-row';
+      const line=document.createElement('div');line.appendChild(trackLinks(t.artist,t.title));
+      const details=document.createElement('small');
+      details.textContent=(t.artistPresent?uiText("Artiste présent, titre absent"):uiText("Artiste absent"))+' · score '+t.score.toFixed(1)+' %';
+      div.append(line,details);$('missingTracks').appendChild(div);
+    }
+    if(order.length>maximum) {
+      const div=document.createElement('div');div.className='small muted';
+      div.textContent=uiText("Affichage limité aux ")+maximum+uiText(" premiers sur ")+order.length+uiText(" titres absents.");
+      $('missingTracks').appendChild(div);
+    }
+    if(!order.length)$('missingTracks').textContent=uiText("Aucun titre absent parmi les recommandations examinées.");
+  }
+}
+async function collectArtistTracks(artist,similarity,key,matcher,minScore,perPage,page,stats,known,missing) {
+  const data=await lastfm('artist.getTopTracks',
+    {artist,limit:String(perPage),page:String(page)},key);
+  const tracks=asArray(data.toptracks?.track);
+  let added=0;
+  const artistPresent=matcher.hasArtist(artist);
+  for(let rank=0;rank<tracks.length;rank++) {
+    const t=tracks[rank];
+    // Score de sélection, pas une mesure de similarité entre morceaux.
+    const position=(page-1)*perPage+rank;
+    const score=100*similarity;
+    if(score<minScore) continue;
+    const item=candidate(artist,t.name,score,matcher);
+    if(!item) {pushMissingTrack(missing,artist,t.name,score,artistPresent);continue;}
+    const id=normalize(item.artist)+'|'+normalize(item.title);
+    if(known.has(id)) continue;
+    known.add(id);stats.candidates++;added++;
+    item.source='artist';item.rank=position+1;
+    stats.group.tracks.push(item);
+  }
+  return {count:tracks.length,added};
+}
+async function fromArtist(track,key,target,minScore,matcher,surprise,excludeIds=new Set()) {
+  setStatus(uiText("Last.fm : recherche des artistes proches…"));
+  const data=await lastfm('artist.getSimilar',{artist:track.artist,limit:'100'},key);
+  const artists=asArray(data.similarartists?.artist)
+    .filter(a=>a&&a.name&&normalize(a.name)!==normalize(track.artist))
+    .map(a=>({name:a.name,weight:Number(a.match)||0}));
+  const groups=[],seenArtists=new Set();
+  const stats={discovered:artists.length,explored:0,represented:0,candidates:0,expansion:0,warnings:[],librarySearches:0};
+  const known=new Set(excludeIds);
+  const missing={missingArtists:[],missingTracks:[],missingKeys:new Set()};
+  async function explore(start,end) {
+    for(let i=start;i<Math.min(end,artists.length);i++) {
+      const a=artists[i],id=normalize(a.name);
+      if(seenArtists.has(id)) continue;
+      seenArtists.add(id);
+      const group={artist:a.name,weight:a.weight,tracks:[]};
+      groups.push(group);stats.explored++;
+      if(!matcher.hasArtist(a.name))missing.missingArtists.push(a);
+      setStatus(uiText("Exploration ")+stats.explored+'/'+Math.min(end,artists.length)+
+        ' : '+a.name+'\n'+stats.candidates+uiText(" titres locaux candidats"));
+      try {
+        await collectArtistTracks(a.name,a.weight,key,matcher,minScore,100,1,
+          {group,candidates:0},known,missing);
+      } catch(e) {
+        if(/code (10|26|29)/.test(String(e.message||e))) throw e;
+        stats.warnings.push(a.name+' : '+(e.message||String(e)));
+      }
+      stats.candidates=groups.reduce((n,g)=>n+g.tracks.length,0);
+      if(stats.explored%5===0) await sleep(0);
+    }
+  }
+  // 30 artistes d'abord ; extensions à 60 puis 100 seulement si nécessaire.
+  await explore(0,30);
+  if(stats.candidates<target && artists.length>30) {stats.expansion=60;await explore(30,60);}
+  if(stats.candidates<target && artists.length>60) {stats.expansion=100;await explore(60,100);}
+  // Si l'on manque encore de titres, pages suivantes chez les artistes connus.
+  if(stats.candidates<target) {
+    for(const page of [2,3]) {
+      for(const group of groups.filter(g=>g.tracks.length).sort((a,b)=>b.weight-a.weight)) {
+        if(stats.candidates>=target) break;
+        setStatus(uiText("Complément des discographies : ")+group.artist+' (page '+page+')');
+        try {
+          await collectArtistTracks(group.artist,group.weight,key,matcher,minScore,100,page,
+            {group,candidates:0},known,missing);
+        } catch(e) {
+          if(/code (10|26|29)/.test(String(e.message||e))) throw e;
+          stats.warnings.push(group.artist+' page '+page+' : '+(e.message||String(e)));
+        }
+        stats.candidates=groups.reduce((n,g)=>n+g.tracks.length,0);
+        await sleep(0);
+      }
+      if(stats.candidates>=target) break;
+    }
+  }
+  stats.represented=groups.filter(g=>g.tracks.length).length;
+  stats.librarySearches=matcher.searches;
+  return {items:mixOrder(diversified(groups,target,surprise),surprise),stats,mode:'artist',missing};
+}
+async function fromTrack(track,key,target,minScore,matcher,surprise) {
+  setStatus(uiText("Last.fm : morceaux similaires…"));
+  const limit=Math.min(500,Math.max(100,target*5));
+  const data=await lastfm('track.getSimilar',
+    {artist:track.artist,track:track.title,limit:String(limit)},key);
+  const tracks=asArray(data.similartracks?.track), groups=[], seen=new Set();
+  const missing={missingArtists:[],missingTracks:[],missingKeys:new Set()};
+  const missingArtistsSeen=new Set();
+  for(let i=0;i<tracks.length;i++) {
+    const t=tracks[i];const score=100*(Number(t.match)||0);
+    if(score<minScore) continue;
+    if(!t.artist?.name||!t.name) continue;
+    if(i%10===0) setStatus(uiText("Recherche locale : ")+i+'/'+tracks.length);
+    const artistPresent=matcher.hasArtist(t.artist.name);
+    if(!artistPresent&&!missingArtistsSeen.has(normalize(t.artist.name))) {
+      missingArtistsSeen.add(normalize(t.artist.name));
+      missing.missingArtists.push({name:t.artist.name,weight:Number(t.match)||0});
+    }
+    const item=candidate(t.artist.name,t.name,score,matcher);
+    if(!item) {pushMissingTrack(missing,t.artist.name,t.name,score,artistPresent);continue;}
+    const id=normalize(item.artist)+'|'+normalize(item.title);
+    if(seen.has(id)) continue;
+    seen.add(id);item.source='track';groups.push(item);
+    if(i%15===14) await sleep(0);
+  }
+  // Sélection variée sur les recommandations locales, avec tirage pondéré.
+  const pool=groups.slice(), picked=[];
+  while(pool.length && picked.length<target) picked.push(weightedPick(pool,surprise));
+  const items=mixOrder(picked,surprise);
+  return {items,stats:{discovered:0,explored:0,
+    represented:new Set(groups.map(g=>normalize(g.artist))).size,
+    candidates:groups.length,librarySearches:matcher.searches,warnings:[]},mode:'track',remote:tracks.length,missing};
+}
+// Top titres : pagination et choix optionnel des versions, indépendants du curseur Surprise.
+async function fromTopArtist(track,key,target,matcher,multipleVersions,randomOrder) {
+  const chosen=[];
+  const seenTitles=new Set();
+  const seenPaths=new Set();
+  const missing={missingArtists:[],missingTracks:[],missingKeys:new Set()};
+  const artistPresent=matcher.hasArtist(track.artist);
+  let pages=0, examined=0, stopped=false;
+  const perPage=100, maxPages=20;
+  for(let page=1;page<=maxPages && chosen.length<target;page++) {
+    setStatus(uiText("Top de ")+track.artist+uiText(" : page ")+page+', '+chosen.length+'/'+target+uiText(" titres locaux…"));
+    const data=await lastfm('artist.getTopTracks',
+      {artist:track.artist,limit:String(perPage),page:String(page)},key);
+    pages++;
+    const tracks=asArray(data.toptracks?.track);
+    if(!tracks.length) break;
+    for(let i=0;i<tracks.length;i++) {
+      const t=tracks[i];
+      if(!t.name) continue;
+      examined++;
+      const titleId=normalize(t.name);
+      if(seenTitles.has(titleId)) continue;
+      seenTitles.add(titleId);
+      const versions=matcher.match(track.artist,t.name);
+      const rank=(page-1)*perPage+i+1;
+      if(!versions.length) {
+        pushMissingTrack(missing,track.artist,t.name,Math.max(0,100-rank/20),artistPresent);
+        continue;
+      }
+      const ordered=multipleVersions?versions:[versions[0]];
+      for(const version of ordered) {
+        if(seenPaths.has(version.path)) continue;
+        seenPaths.add(version.path);
+        chosen.push({artist:track.artist,title:t.name,score:0,
+          path:version.path,versions:versions.length,
+          codecs:unique(versions.map(v=>v.codec)),
+          rank,playcount:Number(t.playcount)||null,source:'topArtist'});
+        if(chosen.length>=target) break;
+      }
+      if(chosen.length>=target) break;
+    }
+    const totalPages=Number(data.toptracks?.['@attr']?.totalPages);
+    if((Number.isFinite(totalPages)&&totalPages>0&&page>=totalPages)||tracks.length<perPage) {stopped=true;break;}
+    await sleep(0);
+  }
+  if(randomOrder) {
+    for(let i=chosen.length-1;i>0;i--) {
+      const j=Math.floor(Math.random()*(i+1));
+      [chosen[i],chosen[j]]=[chosen[j],chosen[i]];
+    }
+  }
+  return {mode:'topArtist',items:chosen,missing,stats:{pages,examined,
+    candidates:chosen.length,librarySearches:matcher.searches,
+    warnings:[],stopped,maxPages}};
+}
+function updateDiscoveryMode() {
+  const isTop=$('mode').value==='topArtist';
+  $('topArtistOptions').hidden=!isTop;
+  $('surpriseBox').hidden=isTop;
+  $('threshold').disabled=isTop;
+}
+async function search() {
+  if(working)return;
+  setWorking(true);selection=[];source=null;missingArtists=[];missingTracks=[];$('summary').textContent='';$('results').replaceChildren();drawMissing();
+  try {
+    const key=$('key').value.trim();if(!key)throw new Error(uiText("Clé API manquante."));
+    localStorage.setItem('lastfmApiKey',key);
+    const target=clampNumber($('target').value,1,200,50);
+    const minScore=clampNumber($('threshold').value,0,100,10);
+    const surprise=clampNumber($('surprise').value,0,100,40);
+    const mode=$('mode').value;
+    const track=await getCurrent();
+    if(!track.artist||!track.title)throw new Error(uiText("Aucun titre en cours identifiable."));
+    source=track;$('current').textContent=track.artist+' - '+track.title;
+    const matcher=makeLibraryMatcher();
+    let result;
+    if(mode==='topArtist')result=await fromTopArtist(track,key,target,matcher,$('topVersions').checked,$('topOrder').value==='random');
+    else if(mode==='artist')result=await fromArtist(track,key,target,minScore,matcher,surprise);
+    else {
+      result=await fromTrack(track,key,target,minScore,matcher,surprise);
+      if(mode==='auto'&&result.items.length<target) {
+        const direct=result;
+        const ids=new Set(direct.items.map(t=>normalize(t.artist)+'|'+normalize(t.title)));
+        setStatus(uiText("Mode automatique : ")+direct.items.length+'/'+target+
+          uiText(" titres directs. Recherche du complément chez les artistes similaires…"));
+        const supplement=await fromArtist(track,key,target-direct.items.length,
+          minScore,matcher,surprise,ids);
+        const byId=new Map();
+        for(const t of [...direct.items,...supplement.items]) {
+          const id=normalize(t.artist)+'|'+normalize(t.title);
+          if(!byId.has(id))byId.set(id,t);
+        }
+        const combined=[...byId.values()].slice(0,target);
+        const missTracks=[...direct.missing.missingTracks,...supplement.missing.missingTracks];
+        const missArtists=[...direct.missing.missingArtists,...supplement.missing.missingArtists];
+        const dedup=(items,keyFn)=>[...new Map(items.map(x=>[keyFn(x),x])).values()];
+        result={mode:'hybrid',items:mixOrder(combined,surprise),
+          directCount:direct.items.length, supplementCount:combined.length-direct.items.length,
+          remote:direct.remote,
+          stats:{...supplement.stats,librarySearches:matcher.searches,
+            candidates:direct.stats.candidates+supplement.stats.candidates,
+            warnings:[...direct.stats.warnings,...supplement.stats.warnings]},
+          missing:{missingArtists:dedup(missArtists,a=>normalize(a.name)),
+            missingTracks:dedup(missTracks,t=>normalize(t.artist)+'|'+normalize(t.title))}};
+      }
+    }
+    selection=result.items;searchMode=result.mode;latestStats=result.stats;
+    $('friendCreate').disabled=true;
+    missingArtists=result.missing?.missingArtists||[];
+    missingTracks=result.missing?.missingTracks||[];
+    draw();drawMissing();
+    const text=(result.mode==='hybrid'?uiText("Automatique · hybride"):result.mode==='artist'?uiText("Artistes similaires"):result.mode==='topArtist'?uiText("Top titres de l’artiste"):uiText("Morceaux similaires"))+
+      ' · '+selection.length+' / '+target+uiText(" titres sélectionnés.")+(result.mode==='topArtist'?'':uiText(" Surprise : ")+surprise+'/100.');
+    setStatus(text);
+    $('summary').textContent=(result.mode==='topArtist'
+      ? result.stats.pages+uiText(" page(s) Last.fm consultée(s) ; ")+result.stats.examined+uiText(" titres examinés ; ")+result.stats.librarySearches+uiText(" recherche(s) Foobar.")+
+        (result.stats.pages>=result.stats.maxPages&&selection.length<target?uiText(" Limite de pagination atteinte."):'')
+      : result.mode==='hybrid'
+      ? result.directCount+uiText(" titres issus des morceaux similaires ; ")+result.supplementCount+
+        uiText(" compléments issus des artistes similaires.\n")+
+        result.stats.explored+uiText(" artistes explorés pour le complément.\n")+
+        (result.remote||0)+uiText(" recommandations directes examinées.\n")
+      : result.mode==='artist'
+      ? result.stats.explored+uiText(" artistes explorés ; ")+result.stats.represented+uiText(" présents avec au moins un titre correspondant.\n")
+      : (result.remote||0)+uiText(" recommandations Last.fm examinées.\n"))+
+      result.stats.candidates+uiText(" titres locaux candidats ; ")+result.stats.librarySearches+uiText(" recherches Foobar.\n")+
+      (result.stats.expansion?uiText("Élargissement jusqu’à ")+result.stats.expansion+uiText(" artistes.\n"):'')+
+      (result.stats.warnings?.length?result.stats.warnings.length+uiText(" requête(s) Last.fm ignorée(s)."):'');
+  } catch(e) {setStatus(uiText("Erreur : ")+(e.message||String(e)),true);}
+  finally {setWorking(false);}
+}
+function playlistName(base) {
+  if(api.findPlaylist(base)<0)return base;
+  for(let n=2;n<10000;n++) if(api.findPlaylist(base+' ('+n+')')<0)return base+' ('+n+')';
+  throw new Error(uiText("Impossible de déterminer un nom de playlist libre."));
+}
+// Vérifie les chemins réellement présents et leur ordre. getPlaylistItems renvoie un JSON.
+function playlistPaths(index) {
+  const raw=api.getPlaylistItems(index);
+  const parsed=typeof raw==='string'?JSON.parse(raw):raw;
+  const list=Array.isArray(parsed)?parsed:
+    (Array.isArray(parsed?.items)?parsed.items:Array.isArray(parsed?.tracks)?parsed.tracks:null);
+  if(!list)throw new Error(uiText("Format de getPlaylistItems non reconnu : ")+String(raw).slice(0,220));
+  return list.map(item=>{
+    if(typeof item==='string')return item;
+    return item?.path??item?.filePath??item?.location??item?.rawPath??'';
+  }).map(String);
+}
+function equalPath(a,b) {
+  return String(a).replace(/\//g,'\\').toLowerCase()===String(b).replace(/\//g,'\\').toLowerCase();
+}
+async function createPlaylist() {
+  if(working||!source||!selection.length)return;
+  const friendContext=source.kind==='friend';
+  const report=(message,error=false)=>source.kind==='tags'?tagStatus(message,error):friendContext?setFriendStatus(message,error):setStatus(message,error);
+  setWorking(true);
+  try {
+    const name=playlistName(source.kind==='friend' ? ('Last.fm - '+source.user+' - '+(source.type==='loved'?uiText("Aimés"):'Top '+source.period)) : ('Last.fm Radio - '+source.artist+' - '+source.title));
+    const paths=unique(selection.map(t=>t.path));
+    api.createPlaylist(Math.max(0,api.playlistCount-1),name);
+    const index=api.findPlaylist(name);
+    if(index<0)throw new Error(uiText("Playlist introuvable après création."));
+    api.activePlaylist=index;
+    let added=0;
+    for(const path of paths) {
+      const before=api.getPlaylistItemCount(index);
+      // Cette signature et cette position ont été validées dans le prototype 1.1.
+      api.addPath(index,before===0?-1:before,path,false);
+      let confirmed=false;
+      for(let tries=0;tries<40;tries++) {
+        await sleep(200);
+        if(api.getPlaylistItemCount(index)>before) {
+          const actual=playlistPaths(index);
+          const expected=paths.slice(0,added+1);
+          if(actual.length!==expected.length || expected.some((p,i)=>!equalPath(actual[i],p))) {
+            throw new Error(uiText("Ordre incorrect à l’ajout ")+(added+1)+uiText(" : vérifie la playlist « ")+name+' ».');
+          }
+          confirmed=true;added++;break;
+        }
+      }
+      if(!confirmed) {
+        report(uiText("Ajout non confirmé : ")+path+'\n'+added+uiText(" ajout(s) confirmés. Vérifier la playlist avant de recommencer."),true);
+        return;
+      }
+      report(uiText("Création de « ")+name+' » : '+added+'/'+paths.length);
+    }
+    const finalPaths=playlistPaths(index);
+    if(finalPaths.length!==paths.length || paths.some((p,i)=>!equalPath(p,finalPaths[i]))) {
+      throw new Error(uiText("Vérification finale : l’ordre des fichiers diffère de la sélection."));
+    }
+    report(uiText("Playlist créée et ordre vérifié : ")+name+'\n'+added+uiText(" titres ajoutés."));
+  }catch(e){report(uiText("Erreur lors de la création : ")+(e.message||String(e)),true);}
+  finally{setWorking(false);}
+}
+
+// Comptes suivis et favoris. Les appels Last.fm sont publics ; aucune authentification du compte requise.
+function getCredentials(){
+  const key=$('key').value.trim(),user=$('username').value.trim();
+  if(!key)throw new Error(uiText("Renseigne ta clé API dans Paramètres."));
+  if(!user)throw new Error(uiText("Renseigne ton identifiant Last.fm dans Paramètres."));
+  return {key,user};
+}
+function switchTab(tab){
+  for(const btn of document.querySelectorAll('.tab'))btn.classList.toggle('active',btn.dataset.tab===tab);
+  for(const id of ['discovery','tags','friends','genres','settings']) $('tab-'+id).hidden=(id!==tab);
+}
+function setFriendStatus(message,error=false){$('friendStatus').textContent=message;$('friendStatus').className=error?'small error':'small muted';}
+function refreshFriendSelect(names){
+  const select=$('friend'),old=select.value;
+  select.replaceChildren();
+  for(const n of names){const opt=document.createElement('option');opt.value=n;opt.textContent=n===$('username').value.trim()?n+uiText(" (moi)"):n;select.appendChild(opt);}
+  if(names.includes(old))select.value=old;
+}
+async function loadFriends(){
+  if(working)return;
+  setWorking(true);
+  try{
+    const {key,user}=getCredentials(),names=[user],seen=new Set([user.toLowerCase()]);
+    let page=1,totalPages=1;
+    do{
+      setFriendStatus(uiText("Lecture des comptes suivis : page ")+page+'…');
+      const data=await lastfm('user.getFriends',{user,limit:'200',page:String(page)},key);
+      for(const f of asArray(data.friends?.user)){
+        if(f.name&&!seen.has(f.name.toLowerCase())){names.push(f.name);seen.add(f.name.toLowerCase());}
+      }
+      totalPages=Math.min(50,Math.max(1,Number(data.friends?.['@attr']?.totalPages)||1));
+      page++;
+    }while(page<=totalPages);
+    refreshFriendSelect(names);
+    setFriendStatus(names.length+uiText(" compte(s), toi compris."));
+  }catch(e){setFriendStatus(uiText("Erreur : ")+(e.message||String(e)),true);switchTab('settings');}
+  finally{setWorking(false);}
+}
+
+// Exploration du graphe des abonnements, à profondeur bornée. Cache mémoire de session.
+const networkCache=new Map();
+let networkCancel=false;
+const networkKey=name=>String(name||'').trim().toLowerCase();
+function networkStatus(message,error=false){
+  $('networkStatus').textContent=message;
+  $('networkStatus').className=error?'small error':'small muted';
+}
+async function networkFriends(username,key){
+  const ck='friends:'+networkKey(username);
+  if(networkCache.has(ck))return networkCache.get(ck);
+  const users=[],seen=new Set();let pages=1;
+  for(let page=1;page<=Math.min(pages,10);page++){
+    const data=await lastfm('user.getFriends',{user:username,limit:'200',page:String(page)},key);
+    pages=Math.min(10,Math.max(1,Number(data.friends?.['@attr']?.totalPages)||1));
+    for(const profile of asArray(data.friends?.user)){
+      const name=String(profile.name||'').trim();const id=networkKey(name);
+      if(name&&!seen.has(id)){users.push(name);seen.add(id);}
+    }
+  }
+  networkCache.set(ck,users);
+  return users;
+}
+async function networkTopArtists(username,key){
+  const ck='artists:'+networkKey(username);
+  if(networkCache.has(ck))return networkCache.get(ck);
+  const data=await lastfm('user.getTopArtists',{user:username,period:'overall',limit:'100',page:'1'},key);
+  const artists=asArray(data.topartists?.artist).map((a,i)=>({name:String(a.name||''),id:normalize(a.name),rank:i+1,plays:Number(a.playcount)||0})).filter(a=>a.id);
+  networkCache.set(ck,artists);
+  return artists;
+}
+// Similarité de cosinus pondérée par rang ; 100 = listes presque identiques.
+// Ce score dépend des seuls artistes du top 100, et n'est PAS la compatibilité Last.fm.
+function compatibility(reference,other){
+  const weights=new Map(reference.map(a=>[a.id,1/Math.sqrt(a.rank)]));
+  let normA=0,normB=0,dot=0;const common=[];
+  for(const a of reference)normA+=Math.pow(1/Math.sqrt(a.rank),2);
+  for(const b of other){
+    const w=1/Math.sqrt(b.rank);normB+=w*w;
+    if(weights.has(b.id)){
+      dot+=weights.get(b.id)*w;
+      common.push({name:b.name,weight:weights.get(b.id)*w});
+    }
+  }
+  common.sort((a,b)=>b.weight-a.weight);
+  return {score:normA&&normB?100*dot/Math.sqrt(normA*normB):0,common:common.slice(0,5).map(a=>a.name),shared:common.length};
+}
+const activityCache=new Map();
+async function lastActivity(username,key){
+  const cacheKey=networkKey(username);
+  const previous=activityCache.get(cacheKey);
+  if(previous && Date.now()-previous.checked<6*60*60*1000)return previous.value;
+  let result={kind:'unknown',date:null,reason:''};
+  try{
+    const data=await lastfm('user.getRecentTracks',{user:username,limit:'3',page:'1'},key);
+    const tracks=asArray(data.recenttracks?.track);
+    const withDate=tracks.find(t=>t.date?.uts && Number(t.date.uts)>0);
+    if(withDate){
+      const dt=new Date(Number(withDate.date.uts)*1000);
+      if(Number.isFinite(dt.getTime()))result={kind:'dated',date:dt,reason:''};
+    }else result.reason=uiText("Aucune date d’écoute accessible");
+  }catch(e){result.reason=uiText("Données non disponibles");}
+  activityCache.set(cacheKey,{checked:Date.now(),value:result});
+  return result;
+}
+function activityStatus(activity,months){
+  if(activity.kind!=='dated')return {status:'unknown',label:uiText("Activité inconnue")};
+  const label=uiText("Dernière écoute : ")+activity.date.toLocaleDateString(UI_LANG==='en'?'en-GB':'fr-FR');
+  if(!months)return {status:'active',label};
+  const limit=new Date();limit.setMonth(limit.getMonth()-months);
+  return {status:activity.date<limit?'inactive':'active',label};
+}
+function renderNetwork(results,profiles){
+  const out=$('networkResults');out.replaceChildren();
+  const showExcluded=$('showInactive').checked;
+  for(const [i,r] of results.entries()){
+    if(r.activityStatus==='inactive'&&!showExcluded)continue;
+    const row=document.createElement('div');row.className='track';
+    if(r.activityStatus==='inactive')row.classList.add('excluded');
+    const btn=document.createElement('button');btn.className='secondary';
+    btn.textContent=uiText("Choisir · ")+r.score.toFixed(1)+' %';
+    btn.title=uiText("Sélectionner ce profil pour une playlist");
+    btn.addEventListener('click',()=>{
+      if(![...$('friend').options].some(o=>networkKey(o.value)===networkKey(r.name))){
+        const opt=document.createElement('option');opt.value=r.name;opt.textContent=r.name+uiText(" (réseau)");$('friend').appendChild(opt);
+      }
+      $('friend').value=r.name;
+      networkStatus(uiText("Profil ")+r.name+uiText(" sélectionné. Choisis le type de playlist, puis recherche les titres dans Foobar."));
+    });
+    const name=document.createElement('div');
+    name.append(document.createTextNode((i+1)+'. '),linkTo(r.name,lastUrl.user(r.name)),document.createTextNode(' · '));
+    name.appendChild(btn);
+    const info=document.createElement('div');info.className='small muted';
+    info.append(document.createTextNode(r.shared+uiText(" artistes communs · niveau ")+r.depth+' · '));
+    r.common.forEach((artist,j)=>{if(j)info.append(document.createTextNode(', '));info.appendChild(linkTo(artist,lastUrl.artist(artist)));});
+    const act=document.createElement('div');act.className='activity '+(r.activityStatus==='inactive'?'missing':'muted');
+    act.textContent=(r.activityStatus==='inactive'?uiText("Inactif · "):r.activityStatus==='unknown'?uiText("Activité inconnue · "):uiText("Actif · "))+(r.activityLabel||'');
+    row.append(name,info,act);out.appendChild(row);
+  }
+  if(!out.children.length)out.textContent=uiText("Aucun profil visible pour ce filtre.");
+}
+let lastNetworkResults=[];
+async function exploreNetwork(){
+  if(working)return;
+  networkCancel=false;setWorking(true);$('networkStop').disabled=false;
+  $('networkResults').replaceChildren();
+  try{
+    const {key,user}=getCredentials();
+    const depth=clampNumber($('networkDepth').value,1,3,2);
+    const cap=clampNumber($('networkCap').value,20,500,200);
+    const comparisons=clampNumber($('compareCap').value,10,250,100);
+    const visited=new Set([networkKey(user)]),profiles=[];
+    let frontier=[{name:user,depth:0}],queries=0;
+    // BFS : chaque profil n'est visité qu'une fois, limite stricte d'exploration.
+    for(let level=0;level<depth&&frontier.length&&!networkCancel;level++){
+      const next=[];
+      for(const entry of frontier){
+        if(networkCancel||visited.size>=cap+1)break;
+        networkStatus(uiText("Réseau : niveau ")+(level+1)+'/'+depth+' · '+profiles.length+uiText(" profils candidats · ")+queries+uiText(" requêtes en cache ou réseau"));
+        try{
+          const friends=await networkFriends(entry.name,key);queries++;
+          for(const friend of friends){
+            const id=networkKey(friend);
+            if(visited.has(id))continue;
+            if(profiles.length>=cap)break;
+            visited.add(id);
+            const p={name:friend,depth:level+1};profiles.push(p);next.push(p);
+          }
+        }catch(e){
+          // Les profils privés, supprimés ou inaccessibles ne bloquent pas tout le réseau.
+        }
+        await sleep(0);
+      }
+      frontier=next;
+    }
+    if(networkCancel){networkStatus(uiText("Exploration interrompue · ")+profiles.length+uiText(" profils collectés."));return;}
+    networkStatus(uiText("Comparaison musicale des profils…"));
+    const base=await networkTopArtists(user,key);if(!base.length)throw new Error(uiText("Ton compte ne possède pas de classement d’artistes exploitable."));
+    const ranked=[];let analyzed=0,failed=0,excluded=0,unknown=0;
+    const months=Number($('activityMonths').value)||0;
+    // Pour limiter les appels, examiner d'abord les profils proches dans le réseau.
+    for(const profile of profiles.slice(0,comparisons)){
+      if(networkCancel)break;
+      try{
+        const activity=await lastActivity(profile.name,key);
+        const state=activityStatus(activity,months);
+        if(state.status==='inactive')excluded++;
+        if(state.status==='unknown')unknown++;
+        // Les profils exclus ne consomment pas de requête getTopArtists.
+        if(state.status==='inactive'){
+          ranked.push({...profile,score:0,common:[],shared:0,activityStatus:state.status,activityLabel:state.label});
+        }else{
+          const artists=await networkTopArtists(profile.name,key);
+          const match=compatibility(base,artists);
+          ranked.push({...profile,...match,activityStatus:state.status,activityLabel:state.label});
+        }
+      }catch(e){failed++;}
+      analyzed++;
+      if(analyzed%3===0){networkStatus(uiText("Compatibilité : ")+analyzed+'/'+Math.min(profiles.length,comparisons)+uiText(" profils comparés…"));await sleep(0);}
+    }
+    ranked.sort((a,b)=>b.score-a.score||a.depth-b.depth);
+    lastNetworkResults=ranked;renderNetwork(ranked,profiles);
+    networkStatus((networkCancel?uiText("Recherche interrompue. "):'')+profiles.length+uiText(" profils découverts · ")+analyzed+uiText(" comparés · ")+failed+uiText(" indisponibles · ")+excluded+uiText(" inactifs exclus · ")+unknown+uiText(" activité inconnue · ")+ranked.filter(r=>r.activityStatus!=='inactive').length+uiText(" classés. Sélectionne un profil pour créer sa playlist."));
+  }catch(e){networkStatus(uiText("Erreur : ")+(e.message||String(e)),true);}
+  finally{setWorking(false);$('networkStop').disabled=true;}
+}
+function renderFriends(items,missing){
+  const out=$('friendResults');out.replaceChildren();
+  for(const [i,t] of items.entries()){
+    const div=document.createElement('div');div.className='track';
+    const title=document.createElement('strong');title.appendChild(trackLinks(t.artist,t.title,(i+1)+'. '));
+    const detail=document.createElement('div');detail.className='small ok';
+    detail.textContent=t.versions+' version(s) ('+t.codecs.join(', ')+') · '+(t.playcount===null?uiText("morceau aimé"):t.playcount+uiText(" écoutes"));
+    div.append(title,detail);out.appendChild(div);
+  }
+  if(!items.length)out.textContent=uiText("Aucun morceau trouvé dans Foobar.");
+  const outMissing=$('friendMissing');outMissing.replaceChildren();
+  for(const t of missing.slice(0,300)){
+    const div=document.createElement('div');div.className='absent-row';
+    div.appendChild(trackLinks(t.artist,t.title));outMissing.appendChild(div);
+  }
+  if(missing.length>300){const p=document.createElement('p');p.className='notice';p.textContent=uiText("300 titres affichés sur ")+missing.length+uiText(" absents.");outMissing.appendChild(p);}
+  if(!missing.length)outMissing.textContent=uiText("Aucun titre absent parmi les résultats examinés.");
+}
+async function searchFriend(){
+  if(working)return;
+  setWorking(true);selection=[];source=null;searchMode='';
+  $('friendResults').replaceChildren();$('friendMissing').replaceChildren();
+  try{
+    const {key}=getCredentials(),user=$('friend').value;
+    if(!user)throw new Error(uiText("Actualise d’abord la liste des personnes suivies."));
+    const type=$('friendType').value,period=$('friendPeriod').value;
+    const target=clampNumber($('friendTarget').value,1,200,50);
+    const maxPages=clampNumber($('friendPages').value,1,50,10);
+    const matcher=makeLibraryMatcher(),chosen=[],missing=[],seen=new Set();
+    let examined=0,pagesRead=0,totalPages=maxPages;
+    for(let page=1;page<=maxPages&&page<=totalPages&&chosen.length<target;page++){
+      setFriendStatus(uiText("Compte ")+user+' · page '+page+' / '+Math.min(maxPages,totalPages)+' · '+chosen.length+'/'+target+uiText(" titres trouvés"));
+      const data=await lastfm(type==='loved'?'user.getLovedTracks':'user.getTopTracks',
+        {user,limit:'200',page:String(page),...(type==='top'?{period}:{})},key);
+      const root=type==='loved'?data.lovedtracks:data.toptracks;
+      const list=asArray(root?.track);
+      totalPages=Math.min(maxPages,Math.max(1,Number(root?.['@attr']?.totalPages)||1));
+      pagesRead++;
+      if(!list.length)break;
+      for(const t of list){
+        const artist=t.artist?.name || (typeof t.artist==='string'?t.artist:'');
+        const title=t.name || '';
+        if(!artist||!title)continue;
+        const id=normalize(artist)+'|'+normalize(title);
+        if(seen.has(id))continue;
+        seen.add(id);examined++;
+        const match=candidate(artist,title,100,matcher);
+        if(match){
+          match.playcount=type==='loved'?null:(Number(t.playcount)||0);
+          chosen.push(match);
+          if(chosen.length>=target)break;
+        }else missing.push({artist,title});
+      }
+      await sleep(0);
+    }
+    selection=chosen;source={kind:'friend',user,type,period};searchMode='friend';
+    renderFriends(chosen,missing);
+    setFriendStatus(user+' : '+chosen.length+' / '+target+uiText(" morceaux locaux sélectionnés."));
+    $('friendSummary').textContent=pagesRead+uiText(" page(s) Last.fm ; ")+examined+uiText(" titres distincts examinés ; ")+missing.length+uiText(" titres absents ; ")+matcher.searches+uiText(" recherches Foobar.");
+    $('summary').textContent='';$('results').replaceChildren();
+  }catch(e){setFriendStatus(uiText("Erreur : ")+(e.message||String(e)),true);}
+  finally{setWorking(false);}
+}
+
+// Tags use their own request cache and cancellation, without changing existing radio modes.
+const tagCache=new Map();let tagLastRequest=0,tagCancel=false,tagController=null,tagSearching=false;
+const tagKey=text=>String(text||'').normalize('NFKC').trim().replace(/\s+/g,' ').toLowerCase();
+function parseTags(text){const tags=[...new Map(String(text).split(/[,;\n]+/).map(t=>t.trim()).filter(Boolean).map(t=>[tagKey(t),t])).values()];if(!tags.length)throw Error(uiText("Saisis au moins un tag."));if(tags.length>6)throw Error(uiText("Six tags maximum par recherche."));return tags;}
+function tagStatus(text,error=false){$('tagStatus').textContent=text;$('tagStatus').className=error?'small error':'small muted';}
+function tagCheckpoint(){if(tagCancel)throw Error(uiText("Recherche arrêtée."));}
+async function tagRequest(method,params,key,stats){
+ tagCheckpoint();const cacheKey=JSON.stringify([method,Object.entries(params).sort()]),hit=tagCache.get(cacheKey);
+ if(hit&&Date.now()-hit.time<21600000){stats.cache++;return hit.data;}
+ await sleep(Math.max(0,350-(Date.now()-tagLastRequest)));tagCheckpoint();tagLastRequest=Date.now();stats.requests++;
+ tagController=new AbortController();const timeout=setTimeout(()=>tagController?.abort(),20000);
+ try{const query=new URLSearchParams({method,...params,api_key:key,format:'json',autocorrect:'1'}),response=await fetch('https://ws.audioscrobbler.com/2.0/?'+query,{signal:tagController.signal});if(!response.ok)throw Error('Last.fm HTTP '+response.status);const data=await response.json();if(data.error)throw Error('Last.fm : '+data.message+' (code '+data.error+')');tagCache.set(cacheKey,{time:Date.now(),data});while(tagCache.size>500)tagCache.delete(tagCache.keys().next().value);return data;}
+ catch(e){if(tagCancel)throw Error(uiText("Recherche arrêtée."));if(e.name==='AbortError')throw Error(uiText("Last.fm ne répond pas dans le délai prévu."));throw e;}finally{clearTimeout(timeout);tagController=null;}
+}
+function tagAffinity(raw,tags,combination){
+ const entries=asArray(raw).filter(t=>t?.name).map((t,n)=>({name:t.name,value:Number.isFinite(Number(t.count))?Math.max(0,Number(t.count)):Math.max(1,100-n)})).filter(t=>t.value>0);
+ const max=Math.max(1,...entries.map(t=>t.value)),best=tags.map(()=>null),compoundNames=new Set();
+ for(const entry of entries)for(let n=0;n<tags.length;n++)if(tagKey(entry.name)===tagKey(tags[n])&&(!best[n]||entry.value>best[n].value))best[n]=entry;
+ if(combination==='all'&&tags.length>1){
+  const words=text=>tagKey(text).replace(/[-‐‑–—]+/g,' ').split(/\s+/).filter(Boolean).sort().join('\u001f');
+  for(const entry of entries)for(let mask=1;mask<(1<<tags.length);mask++){
+   const indices=tags.map((_,n)=>n).filter(n=>mask&(1<<n));if(indices.length<2||words(entry.name)!==words(indices.map(n=>tags[n]).join(' ')))continue;
+   compoundNames.add(entry.name);for(const n of indices)if(!best[n]||entry.value>best[n].value)best[n]=entry;
+  }
+ }
+ const found=best.filter(Boolean);if(!found.length||combination==='all'&&found.length!==tags.length)return null;
+ const matched=[...new Set(found.map(t=>t.name))];return{score:100*found.reduce((sum,t)=>sum+t.value/max,0)/tags.length,matched,composed:matched.filter(name=>compoundNames.has(name))};
+}
+function pickTagged(items,target,surprise,order,maximum){
+ const ranked=items.slice().sort((a,b)=>(order==='popular'?(b.playcount||0)-(a.playcount||0):b.score-a.score)||a.rank-b.rank),out=[],artists=new Map(),paths=new Set(),ids=new Set();
+ while(out.length<target){const pool=ranked.filter(t=>!paths.has(t.path)&&!ids.has(normalize(t.artist)+'|'+normalize(t.title))&&(artists.get(tagKey(t.artist))||0)<maximum);if(!pool.length)break;
+  let item=pool[0];if(surprise>0){const power=4-3.7*surprise/100,weights=pool.map((_,n)=>Math.pow(1-n/pool.length,power)+surprise/100*.15);let roll=Math.random()*weights.reduce((a,b)=>a+b,0);for(let n=0;n<pool.length;n++){roll-=weights[n];if(roll<=0){item=pool[n];break;}}}
+  out.push(item);paths.add(item.path);ids.add(normalize(item.artist)+'|'+normalize(item.title));artists.set(tagKey(item.artist),(artists.get(tagKey(item.artist))||0)+1);
+ }return out;
+}
+async function collectTagged(options,key,matcher,request=tagRequest){
+ const {tags,mode,combination,surprise,target,order,maximum,budget}=options,stats={requests:0,cache:0,seeds:0,examined:0,local:0,warnings:0},seeds=new Map(),missing={missingArtists:[],missingTracks:[],missingKeys:new Set()};
+
+ function addSeeds(list,tag,page,joint=false){
+  for(let n=0;n<list.length;n++){const t=list[n],artist=mode==='artists'?t.name:typeof t.artist==='string'?t.artist:t.artist?.name,title=mode==='artists'?'':t.name;if(!artist||mode!=='artists'&&!title)continue;
+   const id=tagKey(artist)+(mode==='artists'?'':'|'+tagKey(title));let entry=seeds.get(id);if(!entry){entry={artist,title,seed:0,tags:new Set(),joint:false};seeds.set(id,entry);}if(joint){entry.joint=true;entry.jointTags ||= new Set();entry.jointTags.add(tag);}else entry.tags.add(tagKey(tag));entry.seed+=1/(1+((page-1)*200+n)/50);
+  }
+ }
+ async function seedPage(tag,page,joint=false){
+  tagCheckpoint();tagStatus((joint?uiText("Croisement « "):uiText("Tag « "))+tag+uiText(" » · page ")+page+'…');
+  const data=await request(mode==='artists'?'tag.getTopArtists':'tag.getTopTracks',{tag,limit:'200',page:String(page)},key,stats),root=mode==='artists'?data.topartists:data.tracks||data.toptracks,list=asArray(mode==='artists'?root?.artist:root?.track);addSeeds(list,tag,page,joint);return list.length;
+ }
+ if(combination==='all'&&tags.length>1){
+  const combinations=[...new Set([tags.join(' '),tags.join('-'),tags.slice().reverse().join(' '),tags.slice().reverse().join('-')])];
+  for(const tag of combinations){try{await seedPage(tag,1,true);}catch(e){if(tagCancel||/code (10|26|29)/.test(e.message))throw e;stats.warnings++;}}
+ }
+ for(const tag of tags)for(let page=1;page<=(surprise>=60?3:2);page++)if(await seedPage(tag,page)<200)break;
+ const ranked=[...seeds.values()].sort((a,b)=>b.tags.size-a.tags.size||b.seed-a.seed),candidates=[],seen=new Set();stats.seeds=ranked.length;
+ 
+ const buckets=combination==='all'&&tags.length>1?[
+  ranked.filter(seed=>seed.tags.size===tags.length),
+  ranked.filter(seed=>seed.joint&&seed.tags.size!==tags.length),
+  ranked.filter(seed=>!seed.joint&&seed.tags.size!==tags.length)
+ ]:[ranked];
+ const exploration=buckets.flatMap(bucket=>surprise===0?bucket:bucket.map((seed,n)=>({seed,priority:Math.pow(Math.random(),1/Math.max(.001,Math.pow(1-n/bucket.length,6*(1-surprise/100))))})).sort((a,b)=>b.priority-a.priority).map(t=>t.seed));
+ stats.jointSeeds=ranked.filter(seed=>seed.joint).length;
+
+ for(const seed of exploration){
+  tagCheckpoint();if(stats.examined>=budget)break;stats.examined++;
+  const artistPresent=matcher.hasArtist(seed.artist),trackPresent=mode==='artists'||matcher.match(seed.artist,seed.title).length>0;
+  tagStatus(uiText("Vérification des tags ")+stats.examined+'/'+budget+' : '+seed.artist+(seed.title?' — '+seed.title:'')+'\n'+candidates.length+uiText(" titres locaux candidats"));
+  try{
+   const data=await request(mode==='artists'?'artist.getTopTags':'track.getTopTags',{artist:seed.artist,...(mode==='tracks'?{track:seed.title}:{})},key,stats),raw=asArray(data.toptags?.tag).slice();if(seed.jointTags)for(const tag of seed.jointTags)if(!raw.some(t=>tagKey(t.name)===tagKey(tag)))raw.push({name:tag,count:1});const affinity=tagAffinity(raw,tags,combination);if(!affinity)continue;
+   if(!artistPresent){if(!missing.missingArtists.some(a=>tagKey(a.name)===tagKey(seed.artist)))missing.missingArtists.push({name:seed.artist,weight:affinity.score/100,prominence:seed.seed,matchedTags:affinity.matched,composedTags:affinity.composed});if(mode==='tracks')pushMissingTrack(missing,seed.artist,seed.title,affinity.score,false);continue;}
+   if(!trackPresent){pushMissingTrack(missing,seed.artist,seed.title,affinity.score,true);continue;}
+   let tracks;if(mode==='artists'){const data=await request('artist.getTopTracks',{artist:seed.artist,limit:surprise>=60?'200':'100',page:'1'},key,stats);tracks=asArray(data.toptracks?.track);}else tracks=[{name:seed.title}];
+   for(let rank=0;rank<tracks.length;rank++){
+    const track=tracks[rank],item=candidate(seed.artist,track.name,affinity.score,matcher);if(!item){pushMissingTrack(missing,seed.artist,track.name,affinity.score,true);continue;}
+    const id=normalize(item.artist)+'|'+normalize(item.title);if(seen.has(id))continue;seen.add(id);item.rank=rank+1;item.matchedTags=affinity.matched;item.composedTags=affinity.composed;item.playcount=Number(track.playcount)||0;
+    if(mode==='tracks'&&order==='popular'){const info=await request('track.getInfo',{artist:seed.artist,track:seed.title},key,stats);item.playcount=Number(info.track?.playcount)||0;}
+    // Within an artist, equal tag affinity favours earlier top-track ranks at low surprise.
+    candidates.push(item);
+   }
+  }catch(e){if(tagCancel||/code (10|26|29)/.test(e.message)||/HTTP (401|403|429)/.test(e.message))throw e;stats.warnings++;}
+ }
+ tagCheckpoint();stats.local=candidates.length;return{items:pickTagged(candidates,target,surprise,order,maximum),stats,missing};
+}
+function saveTagPreferences(){try{localStorage.setItem('lastfmTagRadio.v1',JSON.stringify(Object.fromEntries(['tagInput','tagMode','tagCombine','tagOrder','tagSurprise','tagTarget','tagMaximum','tagBudget'].map(id=>[id,$(id).value]))));}catch(_){}}
+function drawTagResults(){const container=$('tagResults');container.replaceChildren();for(const [n,t]of selection.entries()){const row=document.createElement('div');row.className='track';row.append(trackLinks(t.artist,t.title,(n+1)+'. '));const detail=document.createElement('div');detail.className='small ok';detail.textContent=t.matchedTags.join(' · ')+(t.composedTags?.length?uiText(" (tag composé)"):'')+(t.playcount?' · '+t.playcount.toLocaleString(UI_LANG==='en'?'en-GB':'fr-FR')+uiText(" écoutes Last.fm"):'');row.append(detail);container.append(row);}if(!selection.length)container.textContent=uiText("Aucun titre local retenu dans les résultats examinés.");}
+function drawTagMissing(missing){
+ const list=$('tagMissingArtists');list.replaceChildren();const artists=missing.missingArtists.slice().sort((a,b)=>b.weight-a.weight||b.prominence-a.prominence||a.name.localeCompare(b.name));
+ $('tagMissingCount').textContent=artists.length?' · '+artists.length:'';
+ for(const artist of artists.slice(0,20)){const row=document.createElement('div');row.className='absent-row';row.append(linkTo(artist.name,lastUrl.artist(artist.name)));const detail=document.createElement('div');detail.className='small muted';detail.textContent=artist.matchedTags.join(' · ')+(artist.composedTags?.length?uiText(" (tag composé)"):'');row.append(detail);list.append(row);}
+ if(!artists.length)list.textContent=uiText("Aucun artiste correspondant identifié comme absent parmi les candidats examinés.");
+ else if(artists.length>20){const note=document.createElement('p');note.className='notice';note.textContent=uiText("Les 20 premiers sur ")+artists.length+uiText(" artistes absents vérifiés sont affichés.");list.append(note);}
+}
+async function searchTags(){
+ if(working)return;tagCancel=false;tagSearching=true;selection=[];source=null;searchMode='';setWorking(true);$('tagResults').replaceChildren();$('tagSummary').textContent='';$('tagMissingArtists').replaceChildren();$('tagMissingCount').textContent='';
+ try{
+  const key=$('key').value.trim();if(!key)throw Error(uiText("Renseigne ta clé API dans Paramètres."));
+  const options={tags:parseTags($('tagInput').value),mode:$('tagMode').value,combination:$('tagCombine').value,order:$('tagOrder').value,surprise:clampNumber($('tagSurprise').value,0,100,40),target:clampNumber($('tagTarget').value,1,200,50),maximum:clampNumber($('tagMaximum').value,1,20,3),budget:clampNumber($('tagBudget').value,10,300,80)};
+  saveTagPreferences();const result=await collectTagged(options,key,makeLibraryMatcher());selection=result.items;searchMode='tags';source={kind:'tags',artist:options.tags.join(' + '),title:(options.mode==='artists'?uiText("par artistes"):uiText("par morceaux"))+' · '+(options.combination==='all'?uiText("tous les tags"):uiText("au moins un tag"))};
+  missingArtists=result.missing.missingArtists;missingTracks=result.missing.missingTracks;drawMissing();drawTagResults();drawTagMissing(result.missing);tagStatus(selection.length+' / '+options.target+uiText(" titres locaux sélectionnés · surprise ")+options.surprise+'/100.');
+  $('tagSummary').textContent=result.stats.seeds+uiText(" candidats Last.fm repérés (dont ")+result.stats.jointSeeds+uiText(" issus des recherches croisées) ; ")+result.stats.examined+uiText(" candidats examinés ; ")+result.stats.local+uiText(" titres locaux candidats.\n")+result.stats.requests+uiText(" requêtes ; ")+result.stats.cache+uiText(" réponses en cache. Résultats limités au réservoir examiné et à ")+options.maximum+uiText(" titre(s) par artiste.")+(result.stats.warnings?' '+result.stats.warnings+uiText(" requête(s) non aboutie(s)."):'');
+ }catch(e){tagStatus(e.message||String(e),true);}finally{tagSearching=false;setWorking(false);}
+}
+try{const saved=JSON.parse(localStorage.getItem('lastfmTagRadio.v1')||'null');if(saved)for(const id of ['tagInput','tagMode','tagCombine','tagOrder','tagSurprise','tagTarget','tagMaximum','tagBudget'])if(typeof saved[id]==='string'&&($(id).tagName!=='SELECT'||[...$(id).options].some(o=>o.value===saved[id])))$(id).value=saved[id];}catch(_){}
+$('tagSurpriseValue').textContent=$('tagSurprise').value;$('tagSurprise').oninput=()=>{$('tagSurpriseValue').textContent=$('tagSurprise').value;saveTagPreferences();};$('tagSearch').onclick=searchTags;$('tagCreate').onclick=createPlaylist;$('tagStop').onclick=()=>{tagCancel=true;tagController?.abort();tagStatus(uiText("Arrêt demandé…"));};
+
+$('key').value=localStorage.getItem('lastfmApiKey')||'';
+$('username').value=localStorage.getItem('lastfmUsername')||'';
+if($('username').value.trim())refreshFriendSelect([$('username').value.trim()]);
+$('mode').addEventListener('change',updateDiscoveryMode);
+updateDiscoveryMode();
+$('surprise').addEventListener('input',()=>{$('surpriseValue').textContent=$('surprise').value;});
+$('refresh').addEventListener('click',refreshCurrent);
+$('search').addEventListener('click',search);
+$('create').addEventListener('click',createPlaylist);
+$('showMissingArtists').addEventListener('change',drawMissing);
+$('showMissingTracks').addEventListener('change',drawMissing);
+for(const btn of document.querySelectorAll('.tab'))btn.addEventListener('click',()=>switchTab(btn.dataset.tab));
+$('saveSettings').addEventListener('click',()=>{const user=$('username').value.trim(),key=$('key').value.trim();if(!user||!key){$('settingsStatus').textContent=uiText("Il faut un identifiant et une clé API.");return;}localStorage.setItem('lastfmUsername',user);localStorage.setItem('lastfmApiKey',key);refreshFriendSelect([user]);$('settingsStatus').textContent=uiText("Enregistré localement. Actualise les personnes suivies dans l’onglet Utilisateurs.");});
+$('loadFriends').addEventListener('click',loadFriends);
+$('networkSearch').addEventListener('click',exploreNetwork);
+$('showInactive').addEventListener('change',()=>renderNetwork(lastNetworkResults,[]));
+$('networkStop').addEventListener('click',()=>{networkCancel=true;networkStatus(uiText("Arrêt demandé, attente de la requête en cours…"));});
+$('friend').addEventListener('change',()=>{const p=$('friendProfileLink');p.replaceChildren();if($('friend').value)p.append(linkTo(uiText("Voir le profil ")+$('friend').value,lastUrl.user($('friend').value)));});
+$('friendType').addEventListener('change',()=>{$('friendPeriodBox').hidden=$('friendType').value!=='top';});
+$('friendSearch').addEventListener('click',searchFriend);
+$('friendCreate').addEventListener('click',createPlaylist);
+refreshCurrent();
+/* Genres Last.fm : aperçu puis écriture explicite. */
+const genreState={groups:[],busy:false,token:0};
+const genreNorm=s=>String(s||'').normalize('NFKC').trim().toLocaleLowerCase();
+function genreUnique(values){const seen=new Set();return values.map(String).map(s=>s.trim()).filter(s=>s&&!seen.has(genreNorm(s))&&seen.add(genreNorm(s)));}
+function genreRejectedBase(tag,artist,album){const n=genreNorm(tag);if(!n)return 'vide';if([artist,album].some(s=>genreNorm(s)===n))return uiText("nom de l’artiste ou de l’album");if(/^(?:\d{2}|\d{4})(?:s|’s|'s)?$/.test(n)||/^\d{4}\s*[-–]\s*\d{4}$/.test(n))return 'année ou décennie';if(/^(?:female|male) (?:vocalists?|vocals?)$|^(?:seen live|albums? i own|i own|owned|favorites?|favourites?|beautiful|my favorites?|my favourites?|to listen|best albums?|love|loved|awesome|good|great|all time favorites?)$/.test(n))return 'étiquette descriptive';return '';}
+function genreStatus(s){$('genreStatus').textContent=s;}
+function genreBusy(b){genreState.busy=b;setWorking(b);for(const id of ['genreSearch','genreAdd','genreReplace','genreClear','countryAdd','countryReplace'])$(id).disabled=b;document.querySelectorAll('#genreResults input, #genreResults button').forEach(e=>e.disabled=b);}
+async function genreRelease(){for(const g of genreState.groups){if(g.list){try{await fb2k.invoke('list.release',{list:g.list});}catch{}g.list=0;}}genreState.groups=[];}
+async function genreColumn(list,script){return await fb2k.invoke('list.format',{list,script});}
+async function genreRows(list){const scripts={path:'%path%',subsong:'%subsong%',artist:'%album artist%',album:'$meta(album)',genres:'$meta_sep(genre,$char(31))',countries:'$meta_sep(country,$char(31))'};const cols={};for(const [k,v]of Object.entries(scripts))cols[k]=await genreColumn(list,v);const n=cols.path.length;if(Object.values(cols).some(a=>!Array.isArray(a)||a.length!==n))throw Error(uiText("Lecture de sélection incohérente."));return cols.path.map((_,i)=>Object.fromEntries(Object.keys(cols).map(k=>[k,['genres','countries'].includes(k)?cols[k][i].split('\x1f').filter(Boolean):String(cols[k][i])])));}
+function genreIdentity(r){return JSON.stringify([r.path.toLocaleLowerCase(),r.subsong]);}
+function genreSameRefs(a,b){return JSON.stringify(a.map(genreIdentity).sort())===JSON.stringify(b.map(genreIdentity).sort());}
+function genreSameValues(a,b){return JSON.stringify(a.map(genreNorm).sort())===JSON.stringify(b.map(genreNorm).sort());}
+async function genreCached(method,params,key){let cache={};try{cache=JSON.parse(localStorage.getItem('lastfm.genre.cache.v1')||'{}');}catch{}const id=JSON.stringify([method,params.artist,params.album||'']);const hit=cache[id];if(hit&&Date.now()-hit.time<7*86400000)return hit.tags;await sleep(350);const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),20000);let data;try{const q=new URLSearchParams({method,...params,api_key:key,format:'json',autocorrect:'1'});const r=await fetch('https://ws.audioscrobbler.com/2.0/?'+q,{signal:controller.signal});if(!r.ok)throw Error('Last.fm HTTP '+r.status);data=await r.json();if(data.error){if([6,7].includes(Number(data.error)))return [];throw Error('Last.fm : '+data.message);}}finally{clearTimeout(timer);}const tags=asArray(data.toptags?.tag).map(t=>({name:String(t.name||'').trim(),count:Number(t.count)||0})).filter(t=>t.name).sort((a,b)=>b.count-a.count);cache[id]={time:Date.now(),tags};const entries=Object.entries(cache).sort((a,b)=>b[1].time-a[1].time).slice(0,300);try{localStorage.setItem('lastfm.genre.cache.v1',JSON.stringify(Object.fromEntries(entries)));}catch{}return tags;}
+function genreNode(tag,text,cls){const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(cls)n.className=cls;return n;}
+function genreDraw(){countrySave();for(const g of genreState.groups){if(g.checks){g.savedChoices=Object.fromEntries(g.checks.map(c=>[genreNorm(c.value),c.checked]));}}const root=$('genreResults');root.replaceChildren();for(const g of genreState.groups){const box=genreNode('section',undefined,'panel');box.append(genreNode('h3',g.artist+' — '+g.album),genreNode('p',g.rows.length+uiText(" piste(s) · ")+g.scope+' · '+g.origin,'small muted'));if(g.list){const actions=genreNode('div',undefined,'actions');for(const [mode,title]of [['album',uiText("Tags de l’album")],['artist',uiText("Tags de l’artiste")]]){const b=genreNode('button',title,'secondary');b.type='button';b.disabled=genreState.busy;b.onclick=()=>genreSource(g,mode);actions.append(b);}box.append(actions);}if(g.error){box.append(genreNode('p',g.error,'error'));root.append(box);continue;}const current=genreUnique(g.rows.flatMap(r=>r.genres));box.append(genreNode('p',uiText("GENRE actuel : ")+(current.join(' · ')||'aucun'),'small'));if(g.albumTags?.length&&g.origin.startsWith(uiText("Artiste"))){const details=genreNode('details');details.append(genreNode('summary',uiText("Tags de l’album écartés")));for(const t of g.albumTags)details.append(genreNode('div',t.name+' — '+genreRejected(t.name,g.artist,g.album),'small muted'));box.append(details);}g.checks=[];let selected=0;for(const t of g.tags){const reason=genreRejected(t.name,g.artist,g.album),label=genreNode('label',undefined,'genre-choice'),check=document.createElement('input');check.type='checkbox';const defaultChecked=!reason&&selected++<Number($('genreLimit').value);check.checked=g.savedChoices&&Object.hasOwn(g.savedChoices,genreNorm(t.name))?g.savedChoices[genreNorm(t.name)]:defaultChecked;check.value=t.name;g.checks.push(check);label.append(check,document.createTextNode(' '+t.name+(t.artists?.length?' ('+t.artists.join(', ')+')':'')+(reason?' — '+reason:'')));box.append(label);}const outcome=genreNode('p','','small ok');const update=()=>{const chosen=genreChosen(g);outcome.textContent=uiText("Remplacer : ")+(chosen.join(' · ')||uiText("aucune écriture"))+uiText("\nAjouter : ")+(chosen.length?genreUnique([...current,...chosen]).join(' · '):uiText("aucune écriture"));};g.checks.forEach(c=>c.onchange=update);update();box.append(outcome);root.append(box);}countryDraw();}
+function genreChosen(g){return genreUnique((g.checks||[]).filter(c=>c.checked).map(c=>c.value));}
+async function genreSearch(){if(genreState.busy||working)return;genreBusy(true);try{await genreRelease();$('genreResults').replaceChildren();const key=$('key').value.trim();if(!key)throw Error(uiText("Renseigne la clé Last.fm dans Paramètres."));const index=await fb2k.invoke('playlist.getActive');if(index<0)throw Error(uiText("Aucune playlist active."));let selected=await fb2k.invoke('playlist.getSelectedItemHandles',{index});try{const rows=await genreRows(selected);if(!rows.length)throw Error(uiText("Sélectionne des albums dans Foobar."));const groups=new Map();for(const r of rows){if(!r.album||!r.artist||r.artist==='?')throw Error(uiText("ARTISTE et ALBUM sont nécessaires pour chaque piste."));const id=JSON.stringify([genreNorm(r.artist),genreNorm(r.album)]);if(!groups.has(id))groups.set(id,{artist:r.artist,album:r.album,selected:[],rows:[],list:0});groups.get(id).selected.push(r);}genreState.groups=[...groups.values()];for(const [i,g]of genreState.groups.entries()){genreStatus(uiText("Recherche ")+(i+1)+' / '+groups.size+' : '+g.artist+' — '+g.album);try{const q='"%album artist%" IS "'+g.artist.replaceAll('"','')+'" AND ALBUM IS "'+g.album.replaceAll('"','')+'"';g.list=await fb2k.invoke('library.search',{query:q});g.rows=await genreRows(g.list);if(!g.rows.length||g.rows.some(r=>genreNorm(r.artist)!==genreNorm(g.artist)||genreNorm(r.album)!==genreNorm(g.album))||g.selected.some(r=>!g.rows.some(t=>genreIdentity(t)===genreIdentity(r)))){await fb2k.invoke('list.release',{list:g.list});g.list=0;if(groups.size!==1)throw Error(uiText("Album hors bibliothèque : sélectionne cet album seul pour écrire ses genres."));g.list=await fb2k.invoke('list.clone',{list:selected});g.rows=await genreRows(g.list);g.scope=uiText("pistes sélectionnées uniquement (hors bibliothèque)");}else g.scope=uiText("album complet dans la bibliothèque");let tags=await genreCached('album.getTopTags',{artist:g.artist,album:g.album},key);g.origin=uiText("Album Last.fm");if(!tags.some(t=>!genreRejected(t.name,g.artist,g.album))&&$('genreFallback').checked){g.albumTags=tags;tags=await genreCached('artist.getTopTags',{artist:g.artist},key);g.origin=uiText("Artiste Last.fm (secours)");}g.tags=[...new Map([...tags,...(g.albumTags||[])].map(t=>[genreNorm(t.name),t])).values()];if(!g.tags.length)g.error=uiText("Aucun tag trouvé : cet album sera ignoré.");}catch(e){g.error=e.message||String(e);}}for(const g of genreState.groups){if(!g.list)continue;try{await countryLoad(g,g.artist,key);}catch(e){g.countryError=e.message||String(e);}}genreDraw();genreStatus(uiText("Aperçu prêt. Vérifie les pistes et les genres puis choisis Ajouter ou Remplacer. Aucun tag écrit."));}finally{await fb2k.invoke('list.release',{list:selected});}}catch(e){genreStatus(e.message||String(e));}finally{genreBusy(false);}}
+async function genreApply(mode,field='GENRE'){const choose=field==='COUNTRY'?countryChosen:genreChosen;const valueKey=field==='COUNTRY'?'countries':'genres';if(genreState.busy||working)return;const plans=genreState.groups.filter(g=>(field==='COUNTRY'||!g.error)&&g.list&&choose(g).length);if(!plans.length){genreStatus(uiText("Coche au moins une valeur dans un album."));return;}genreBusy(true);let completed=0;try{if(!await fb2k.invoke('config.canWriteFiles'))throw Error(uiText("Active Write files dans les propriétés WebView2."));const prepared=[];for(const g of plans){const now=await genreRows(g.list);if(!genreSameRefs(now,g.rows)||now.some(r=>{const old=g.rows.find(t=>genreIdentity(t)===genreIdentity(r));return !old||!genreSameValues(old[valueKey]||[],r[valueKey]||[])||old.artist!==r.artist||old.album!==r.album;}))throw Error(uiText("Les métadonnées ont changé depuis l’aperçu. Relance la recherche."));const chosen=choose(g),want=mode==='add'?genreUnique([...now.flatMap(r=>r[valueKey]||[]),...chosen]):chosen;prepared.push({g,want});}for(const {g,want}of prepared){genreStatus(uiText("Écriture et vérification : ")+g.artist+' — '+g.album);if(!await fb2k.invoke('list.updateFileInfo',{list:g.list,json:JSON.stringify({[field]:want})}))throw Error(uiText("Écriture refusée par Foobar : ")+g.album);const end=Date.now()+30000;let verified=false;do{const counts=await genreColumn(g.list,'$meta_num('+field.toLowerCase()+')');if(counts.length===g.rows.length&&counts.every(n=>Number(n)===want.length)){verified=true;for(let i=0;i<want.length;i++){const values=await genreColumn(g.list,'$meta('+field.toLowerCase()+','+i+')');if(values.length!==g.rows.length||values.some(v=>v!==want[i])){verified=false;break;}}}if(verified)break;await sleep(500);}while(Date.now()<end);if(!verified)throw Error(uiText("Écriture demandée mais non confirmée après 30 secondes pour ")+g.album+uiText(". Vérifie ses propriétés avant de réessayer."));g.rows=await genreRows(g.list);completed++;}genreDraw();genreStatus(field+' '+(mode==='add'?uiText("complété"):uiText("remplacé"))+uiText(" et relu sur ")+completed+' album(s).');}catch(e){genreStatus((completed?completed+uiText(" album(s) déjà écrit(s). "):'')+(e.message||String(e)));}finally{genreBusy(false);}}
+$('genreSearch').onclick=genreSearch;$('genreAdd').onclick=()=>genreApply('add');$('genreReplace').onclick=()=>genreApply('replace');$('genreClear').onclick=async()=>{if(genreState.busy)return;await genreRelease();$('genreResults').replaceChildren();genreStatus(uiText("Aperçu annulé."));};
+
+async function genreSource(g,mode,artist=g.artist){if(genreState.busy||working)return;genreBusy(true);try{const key=$('key').value.trim();if(!key)throw Error(uiText("Renseigne la clé Last.fm dans Paramètres."));genreStatus(uiText("Chargement des tags ")+(mode==='artist'?uiText("de l’artiste"):uiText("de l’album"))+' : '+g.artist);const tags=await genreCached(mode==='artist'?'artist.getTopTags':'album.getTopTags',mode==='artist'?{artist}:{artist:g.artist,album:g.album},key);g.tags=[...new Map(tags.map(t=>[genreNorm(t.name),t])).values()];g.checks=null;g.savedChoices=null;g.albumTags=null;g.origin=mode==='artist'?uiText("Artiste Last.fm : ")+artist+uiText(" (choix manuel)"):uiText("Album Last.fm (choix manuel)");g.error=tags.length?'':uiText("Aucun tag trouvé pour cette source. Essaie l’autre bouton.");genreDraw();genreStatus(uiText("Tags chargés. Vérifie les cases puis choisis Ajouter ou Remplacer. Aucun tag écrit."));}catch(e){genreStatus(e.message||String(e));}finally{genreBusy(false);}}
+
+// Correspondances exactes uniquement : aucune déduction depuis « german techno ».
+const countryAliases={
+Japan:['Japanese','日本'],Germany:['German','Deutschland','deutsch'],France:['French','français','française'],
+'United Kingdom':['UK','British','Britain','Great Britain'], 'United States':['USA','US','American','United States of America'],
+Ghana:['Ghanaian'],Canada:['Canadian'],Australia:['Australian'],Ireland:['Irish'],Italy:['Italian','Italia','italiano'],Spain:['Spanish','España','español'],Portugal:['Portuguese','português'],Brazil:['Brazilian','Brasil','brasileiro'],Argentina:['Argentinian','Argentine'],Mexico:['Mexican','México'],Chile:['Chilean'],Colombia:['Colombian'],Peru:['Peruvian'],
+Netherlands:['Dutch','Holland','Nederland'],Belgium:['Belgian','Belgique','België'],Switzerland:['Swiss','Schweiz','Suisse'],Austria:['Austrian','Österreich'],Sweden:['Swedish','Sverige'],Norway:['Norwegian','Norge'],Denmark:['Danish','Danmark'],Finland:['Finnish','Suomi'],Iceland:['Icelandic','Ísland'],Poland:['Polish','Polska'],Czechia:['Czech','Czech Republic','Česko'],Slovakia:['Slovak'],Hungary:['Hungarian','Magyarország'],Romania:['Romanian'],Greece:['Greek','Ελλάδα'],Ukraine:['Ukrainian','Україна'],Russia:['Russian','Россия'],Turkey:['Turkish','Türkiye'],
+China:['Chinese','中国'],Taiwan:['Taiwanese','台灣','台湾'],'South Korea':['South Korean','대한민국'],India:['Indian','भारत'],Pakistan:['Pakistani'],Indonesia:['Indonesian'],Thailand:['Thai'],Vietnam:['Vietnamese'],Philippines:['Filipino'],Malaysia:['Malaysian'],Singapore:['Singaporean'],
+Iran:['Iranian','ایران'],Israel:['Israeli','ישראל'],Lebanon:['Lebanese'],Egypt:['Egyptian'],Morocco:['Moroccan'],Algeria:['Algerian'],Tunisia:['Tunisian'],Mali:['Malian'],Senegal:['Senegalese'],Nigeria:['Nigerian'],Ethiopia:['Ethiopian'],Kenya:['Kenyan'],'South Africa':['South African'],Cameroon:['Cameroonian'],'New Zealand':['New Zealander'],Cuba:['Cuban'],Jamaica:['Jamaican'],Haiti:['Haitian'],Serbia:['Serbian'],Croatia:['Croatian'],Slovenia:['Slovenian'],Estonia:['Estonian'],Latvia:['Latvian'],Lithuania:['Lithuanian'],Georgia:['Georgian'],Armenia:['Armenian']
+};
+const countryIndex=new Map(Object.entries(countryAliases).flatMap(([country,aliases])=>[country,...aliases].map(s=>[genreNorm(s),country])));
+function countryFor(tag){return countryIndex.get(genreNorm(tag))||'';}
+function genreRejected(tag,artist,album){return countryFor(tag)?uiText("pays proposé dans COUNTRY"):genreRejectedBase(tag,artist,album);}
+function countryChosen(g){return (g.countryChecks||[]).filter(c=>c.checked).map(c=>c.value);}
+function countrySave(){for(const g of genreState.groups)if(g.countryChecks)g.countryChoices=Object.fromEntries(g.countryChecks.map(c=>[c.value,c.checked]));}
+function countryDraw(){const boxes=[...$('genreResults').children];genreState.groups.forEach((g,i)=>{if(!g.list)return;const box=boxes[i];if(!box)return;const section=genreNode('div',undefined,'country-section');section.append(genreNode('h3',uiText("Pays proposés · COUNTRY")),genreNode('p',uiText("Origine de l’artiste : les adjectifs peuvent aussi désigner une langue. Coche uniquement les pays à retenir."),'small muted'));const current=genreUnique(g.rows.flatMap(r=>r.countries||[]));countryArtistControls(g,section);section.append(genreNode('p',uiText("COUNTRY actuel : ")+(current.join(' · ')||'aucun'),'small'));const suggestions=new Map();for(const t of g.countryTags||[]){const country=countryFor(t.name);if(country){if(!suggestions.has(country))suggestions.set(country,[]);suggestions.get(country).push(t.name+' ('+t.artist+')');}}g.countryChecks=[];for(const [country,tags]of suggestions){const label=genreNode('label',undefined,'genre-choice'),check=document.createElement('input');check.type='checkbox';check.value=country;check.checked=!!g.countryChoices?.[country];check.disabled=genreState.busy;label.append(check,document.createTextNode(' '+country+' ← '+tags.join(', ')));section.append(label);g.countryChecks.push(check);}if(!suggestions.size)section.append(genreNode('p',uiText("Aucun pays reconnu dans les tags des artistes consultés. Essaie un artiste ci-dessus."),'small muted'));const result=genreNode('p','','small ok');const update=()=>{const values=countryChosen(g);result.textContent=uiText("Remplacer : ")+(values.join(' · ')||uiText("aucune écriture"))+uiText("\nAjouter : ")+(values.length?genreUnique([...current,...values]).join(' · '):uiText("aucune écriture"));};g.countryChecks.forEach(c=>c.onchange=update);update();section.append(result);box.append(section);});}
+$('countryAdd').onclick=()=>genreApply('add','COUNTRY');$('countryReplace').onclick=()=>genreApply('replace','COUNTRY');
+
+function collaborationCandidates(credit){return genreUnique(String(credit).split(/\s+(?:&|-|feat\.?|featuring|ft\.?|with|vs\.?)\s+|\s*[;/+]\s*/i)).filter(s=>s!==credit);}
+async function countryLoad(g,artist,key){const tags=await genreCached('artist.getTopTags',{artist},key);g.countrySources=g.countrySources||{};g.countrySources[artist]=tags;g.countryTags=Object.entries(g.countrySources).flatMap(([artist,tags])=>tags.map(t=>({...t,artist})));g.countryError='';}
+async function countryLookup(g,artist){if(genreState.busy||working)return;artist=artist.trim();if(!artist)return;countrySave();genreBusy(true);try{genreStatus(uiText("Pays : recherche des tags de ")+artist);await countryLoad(g,artist,$('key').value.trim());genreDraw();genreStatus(uiText("Pays recherchés pour ")+artist+uiText(". Vérifie les suggestions ; aucun tag écrit."));}catch(e){genreStatus(e.message||String(e));}finally{genreBusy(false);}}
+function countryArtistControls(g,section){section.append(genreNode('p',uiText("Pays recherchés dans les tags d’artiste, indépendamment des genres de l’album."),'small muted'));if(g.countryError)section.append(genreNode('p',g.countryError,'error'));const input=document.createElement('input');input.value=g.artist;input.placeholder=uiText("Nom exact de l’artiste sur Last.fm");input.setAttribute('aria-label',uiText("Artiste à consulter pour ")+g.album);input.style.width='100%';input.disabled=genreState.busy;section.append(input);const actions=genreNode('div',undefined,'actions');for(const [label,fn]of [[uiText("Chercher ses pays"),()=>countryLookup(g,input.value)],[uiText("Genres de cet artiste"),()=>genreSource(g,'artist',input.value.trim())]]){const b=genreNode('button',label,'secondary');b.disabled=genreState.busy;b.onclick=fn;actions.append(b);}section.append(actions);const candidates=collaborationCandidates(g.artist);if(candidates.length){const all=genreNode('button',uiText("Chercher les pays de tous les artistes proposés"),'secondary');all.disabled=genreState.busy;all.onclick=()=>countryLookupAll(g,candidates);section.append(all);section.append(genreNode('p',uiText("Artistes possibles à vérifier (un « & » peut aussi appartenir au nom d’un groupe) :"),'small muted'));const row=genreNode('div',undefined,'actions');for(const artist of candidates){const b=genreNode('button',artist,'secondary');b.disabled=genreState.busy;b.onclick=()=>{input.value=artist;countryLookup(g,artist);};row.append(b);const genres=genreNode('button',uiText("Genres : ")+artist,'secondary');genres.disabled=genreState.busy;genres.onclick=()=>genreSource(g,'artist',artist);row.append(genres);}const allGenres=genreNode('button',uiText("Chercher les genres de tous les artistes proposés"),'secondary');allGenres.disabled=genreState.busy;allGenres.onclick=()=>genreLookupAllArtists(g,candidates);row.append(allGenres);section.append(row);}}
+
+async function countryLookupAll(g,artists){if(genreState.busy||working)return;countrySave();genreBusy(true);const failed=[];let done=0;try{const key=$('key').value.trim();if(!key)throw Error(uiText("Renseigne la clé Last.fm dans Paramètres."));for(const [i,artist]of artists.entries()){genreStatus(uiText("Pays : ")+(i+1)+' / '+artists.length+' — '+artist);try{await countryLoad(g,artist,key);done++;}catch(e){failed.push(artist+' : '+(e.message||String(e)));}}genreDraw();genreStatus(done+uiText(" artiste(s) consulté(s). Coche les pays à retenir ; aucun tag écrit.")+(failed.length?uiText("\nÉchecs : ")+failed.join(' ; '):''));}catch(e){genreStatus(e.message||String(e));}finally{genreBusy(false);}}
+
+async function genreLookupAllArtists(g,artists){if(genreState.busy||working)return;genreBusy(true);const failures=[],results=new Map();let completed=0;try{const key=$('key').value.trim();if(!key)throw Error(uiText("Renseigne la clé Last.fm dans Paramètres."));for(const [i,artist]of artists.entries()){genreStatus(uiText("Genres : ")+(i+1)+' / '+artists.length+' — '+artist);try{const tags=await genreCached('artist.getTopTags',{artist},key);for(const t of tags){const id=genreNorm(t.name);let item=results.get(id);if(!item){item={...t,artists:[]};results.set(id,item);}item.artists.push(artist);item.count=Math.max(item.count,t.count);}completed++;}catch(e){failures.push(artist+' : '+(e.message||String(e)));}}if(completed){g.tags=[...results.values()].sort((a,b)=>b.count-a.count);g.checks=null;g.savedChoices=null;g.albumTags=null;g.origin=uiText("Artistes Last.fm : ")+artists.join(' · ');g.error=g.tags.length?'':uiText("Aucun genre trouvé pour ces artistes.");genreDraw();}genreStatus(completed+uiText(" artiste(s) consulté(s). Vérifie les genres puis choisis Ajouter ou Remplacer. Aucun tag écrit.")+(failures.length?uiText("\nÉchecs : ")+failures.join(' ; '):''));}catch(e){genreStatus(e.message||String(e));}finally{genreBusy(false);}}
+
+
+uiStatic();
+</script>
+</body>
+</html>
