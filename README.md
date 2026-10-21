@@ -6,6 +6,26 @@ A local HTML panel for foobar2000's **foo_webview2** component. Discover music f
 
 This is not a streaming player: it does not download audio or add unavailable Last.fm tracks to your playlists. It is not an official Last.fm application.
 
+## Download
+
+Download the ready-to-install ZIP from [Releases](https://github.com/thomasandro/foobar-lastfm-radio/releases). The first public release is a **beta**: feedback from clean installations is welcome.
+
+## Screenshots
+
+Screenshots show the actual HTML interface rendered in an isolated browser preview. The metadata example uses fictional sample data; it is not a screenshot of a completed tag write. No API keys or personal library data are shown.
+
+### Discovery
+
+![Discovery](https://raw.githubusercontent.com/thomasandro/foobar-lastfm-radio/main/docs/screenshots/discovery.png)
+
+### Tag radio
+
+![Tag radio](https://raw.githubusercontent.com/thomasandro/foobar-lastfm-radio/main/docs/screenshots/tag-radio.png)
+
+### Genre and country preview — sample data
+
+![Metadata preview with sample data](https://raw.githubusercontent.com/thomasandro/foobar-lastfm-radio/main/docs/screenshots/metadata-preview.png)
+
 ## Requirements
 
 - foobar2000 for Windows, with a populated Media Library for discovery and matching.
