@@ -1,6 +1,6 @@
 # Last.fm Radio for foobar2000
 
-Version **2.4.2** · Windows · French / English interface
+Version **2.4.5** · Windows · French / English interface
 
 A local HTML panel for foobar2000's **foo_webview2** component. Discover music from your own library using Last.fm recommendations, tags and user charts, create playlists, and preview genre and country metadata before writing it to your files.
 
@@ -10,7 +10,7 @@ See [CHANGELOG.md](CHANGELOG.md) for changes between versions.
 
 ## Download
 
-Version 2.4.2 is available as the updated [`index.html`](index.html) in this repository. To update an existing installation, replace that file in the same location and reload the panel. Older release ZIPs retain their original version.
+Version 2.4.5 is available as the updated [`index.html`](index.html) in this repository. To update an existing installation, replace that file in the same location and reload the panel. Older release ZIPs retain their original version.
 
 Download the ready-to-install ZIP from [Releases](https://github.com/thomasandro/foobar-lastfm-radio/releases). The first public release is a **beta**: feedback from clean installations is welcome.
 
@@ -111,12 +111,15 @@ The menu is available in French and English. These actions do not write audio me
 Open **Info / Infos** to read Last.fm artist biographies, album descriptions and track lists, or track information where available.
 
 - **Now playing** enables playback following. Information refreshes while the Info tab is visible and when you return to it.
-- **Foobar selection** captures the focused track in the active playlist and pins the information.
+- **Follow Foobar selection** automatically updates information when the focused track or active playlist changes, even while a different track is playing. The preference is saved locally. **Foobar selection** also enables this mode.
+- Playback following and selection following are mutually exclusive. **Now playing** switches back to playback following.
 - Right-click a local result in Discovery, Tags or Users and choose **Show info** to inspect it without starting playback. This disables playback following.
 - Choose **Artist**, **Album** or **Track**. For results without a known album, the panel attempts to resolve one through Last.fm track information.
 - The preferred text language is saved separately from the French/English interface language. Choose French, English, German, Spanish, Italian, Japanese, Polish, Portuguese, Russian, Swedish, Turkish or Chinese.
 - If an artist or album description is absent in the preferred language, the panel tries English and labels the fallback. Track information uses the API's default language.
 - Responses are cached locally for 24 hours, with at most 60 cached entries. **Refresh** bypasses the current information lookup's cache.
+
+When nothing is playing or no track is available in the active playlist, the panel shows a friendly empty-state message instead of raw API placeholder text. No information lookup is made for an empty context.
 
 Availability and text length depend on Last.fm; not every artist, album or track has a description. This is not automatic translation. Last.fm source links and attribution are displayed with the information. The Info feature is read-only and requires no additional filesystem permissions or SMP relay.
 
