@@ -2,6 +2,19 @@
 
 Notable changes to Last.fm Radio for foobar2000 are recorded here, with the latest version first.
 
+## 2.4.6 - 2026-10-29
+
+### Fixed
+
+- Artist information now displays Last.fm listener and play counts, reading the artist-specific statistics structure.
+- Both `playcount` and `plays` response fields are supported.
+- Counts use the interface locale; zero remains visible and missing or invalid values are omitted.
+
+### Notes
+
+- Count handling passed local tests for artist, album and track responses.
+- The downloadable archive includes `index.html`, `README.md`, `CHANGELOG.md` and `LICENSE`, with no credentials or personal installation data.
+
 ## 2.4.5 - 2026-10-29
 
 ### Added
