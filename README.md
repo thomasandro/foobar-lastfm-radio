@@ -6,6 +6,8 @@ A local HTML panel for foobar2000's **foo_webview2** component. Discover music f
 
 This is not a streaming player: it does not download audio or add unavailable Last.fm tracks to your playlists. It is not an official Last.fm application.
 
+See [CHANGELOG.md](CHANGELOG.md) for changes between versions.
+
 ## Download
 
 Version 2.3.1 is available as the updated [`index.html`](index.html) in this repository. To update an existing installation, replace that file in the same location and reload the panel. Older release ZIPs retain their original version.
