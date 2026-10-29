@@ -1,12 +1,14 @@
 # Last.fm Radio for foobar2000
 
-Version **2.3.0** · Windows · French / English interface
+Version **2.3.1** · Windows · French / English interface
 
 A local HTML panel for foobar2000's **foo_webview2** component. Discover music from your own library using Last.fm recommendations, tags and user charts, create playlists, and preview genre and country metadata before writing it to your files.
 
 This is not a streaming player: it does not download audio or add unavailable Last.fm tracks to your playlists. It is not an official Last.fm application.
 
 ## Download
+
+Version 2.3.1 is available as the updated [`index.html`](index.html) in this repository. To update an existing installation, replace that file in the same location and reload the panel. Older release ZIPs retain their original version.
 
 Download the ready-to-install ZIP from [Releases](https://github.com/thomasandro/foobar-lastfm-radio/releases). The first public release is a **beta**: feedback from clean installations is welcome.
 
@@ -90,6 +92,17 @@ Choose **Français** or **English** under **Settings → Langue / Language**. Th
 Higher Surprise settings broaden sampling; they do not guarantee that the requested number of tracks can be found locally. The panel creates a new, uniquely named playlist and verifies the added paths and their order. Creating a playlist makes it active.
 
 Missing-artist and missing-track lists are informational. Matching depends on your local tags and may be affected by spelling variants, different editions and artist-name ambiguities.
+
+### Track context menu (2.3.1)
+
+Right-click a locally matched track in Discovery, Tags or Users to:
+
+- Open its Last.fm page.
+- Add it to the current playlist without switching playlists.
+- Append it to the playback queue.
+- Play it after the current track by placing it at the front of the queue, retaining the existing queued tracks in order.
+
+The menu is available in French and English. These actions do not write audio metadata. Playlist additions are checked against the resulting playlist; queue actions have been tested with local mocks and still need confirmation in a live foobar2000 installation.
 
 ### Tags
 
