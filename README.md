@@ -1,6 +1,6 @@
 # Last.fm Radio for foobar2000
 
-Version **2.4.5** · Windows · French / English interface
+Version **2.4.6** · Windows · French / English interface
 
 A local HTML panel for foobar2000's **foo_webview2** component. Discover music from your own library using Last.fm recommendations, tags and user charts, create playlists, and preview genre and country metadata before writing it to your files.
 
@@ -10,7 +10,7 @@ See [CHANGELOG.md](CHANGELOG.md) for changes between versions.
 
 ## Download
 
-Version 2.4.5 is available as the updated [`index.html`](index.html) in this repository. To update an existing installation, replace that file in the same location and reload the panel. Older release ZIPs retain their original version.
+Version 2.4.6 is available as a ready-to-install ZIP in [Releases](https://github.com/thomasandro/foobar-lastfm-radio/releases/tag/v2.4.6) and as the updated [`index.html`](index.html) in this repository. To update an existing installation, replace that file in the same location and reload the panel. Older release ZIPs retain their original version.
 
 Download the ready-to-install ZIP from [Releases](https://github.com/thomasandro/foobar-lastfm-radio/releases). The first public release is a **beta**: feedback from clean installations is welcome.
 
@@ -120,6 +120,8 @@ Open **Info / Infos** to read Last.fm artist biographies, album descriptions and
 - Responses are cached locally for 24 hours, with at most 60 cached entries. **Refresh** bypasses the current information lookup's cache.
 
 When nothing is playing or no track is available in the active playlist, the panel shows a friendly empty-state message instead of raw API placeholder text. No information lookup is made for an empty context.
+
+Artist, album and track views display Last.fm listener and play counts when provided. Missing or invalid counts are omitted; zero is shown as zero. These are Last.fm totals, not your local playback statistics.
 
 Availability and text length depend on Last.fm; not every artist, album or track has a description. This is not automatic translation. Last.fm source links and attribution are displayed with the information. The Info feature is read-only and requires no additional filesystem permissions or SMP relay.
 
