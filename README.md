@@ -1,6 +1,6 @@
 # Last.fm Radio for foobar2000
 
-Version **2.3.1** · Windows · French / English interface
+Version **2.4.2** · Windows · French / English interface
 
 A local HTML panel for foobar2000's **foo_webview2** component. Discover music from your own library using Last.fm recommendations, tags and user charts, create playlists, and preview genre and country metadata before writing it to your files.
 
@@ -10,7 +10,7 @@ See [CHANGELOG.md](CHANGELOG.md) for changes between versions.
 
 ## Download
 
-Version 2.3.1 is available as the updated [`index.html`](index.html) in this repository. To update an existing installation, replace that file in the same location and reload the panel. Older release ZIPs retain their original version.
+Version 2.4.2 is available as the updated [`index.html`](index.html) in this repository. To update an existing installation, replace that file in the same location and reload the panel. Older release ZIPs retain their original version.
 
 Download the ready-to-install ZIP from [Releases](https://github.com/thomasandro/foobar-lastfm-radio/releases). The first public release is a **beta**: feedback from clean installations is welcome.
 
@@ -95,7 +95,7 @@ Higher Surprise settings broaden sampling; they do not guarantee that the reques
 
 Missing-artist and missing-track lists are informational. Matching depends on your local tags and may be affected by spelling variants, different editions and artist-name ambiguities.
 
-### Track context menu (2.3.1)
+### Track context menu
 
 Right-click a locally matched track in Discovery, Tags or Users to:
 
@@ -105,6 +105,20 @@ Right-click a locally matched track in Discovery, Tags or Users to:
 - Play it after the current track by placing it at the front of the queue, retaining the existing queued tracks in order.
 
 The menu is available in French and English. These actions do not write audio metadata. Playlist additions are checked against the resulting playlist; queue actions have been tested with local mocks and still need confirmation in a live foobar2000 installation.
+
+### Info: artist, album and track
+
+Open **Info / Infos** to read Last.fm artist biographies, album descriptions and track lists, or track information where available.
+
+- **Now playing** enables playback following. Information refreshes while the Info tab is visible and when you return to it.
+- **Foobar selection** captures the focused track in the active playlist and pins the information.
+- Right-click a local result in Discovery, Tags or Users and choose **Show info** to inspect it without starting playback. This disables playback following.
+- Choose **Artist**, **Album** or **Track**. For results without a known album, the panel attempts to resolve one through Last.fm track information.
+- The preferred text language is saved separately from the French/English interface language. Choose French, English, German, Spanish, Italian, Japanese, Polish, Portuguese, Russian, Swedish, Turkish or Chinese.
+- If an artist or album description is absent in the preferred language, the panel tries English and labels the fallback. Track information uses the API's default language.
+- Responses are cached locally for 24 hours, with at most 60 cached entries. **Refresh** bypasses the current information lookup's cache.
+
+Availability and text length depend on Last.fm; not every artist, album or track has a description. This is not automatic translation. Last.fm source links and attribution are displayed with the information. The Info feature is read-only and requires no additional filesystem permissions or SMP relay.
 
 ### Tags
 
