@@ -9,7 +9,7 @@ See LICENSE for the full license text.
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Last.fm Radio 2.4.5</title>
+<title>Last.fm Radio 2.4.6</title>
 <style>
 :root {color-scheme:dark;font-family:Segoe UI,Arial,sans-serif}
 *{box-sizing:border-box}body{background:#191919;color:#ececec;margin:0;padding:16px;font-size:13px}
@@ -30,7 +30,7 @@ details summary{cursor:pointer;font-weight:600;margin:3px 0}.notice{font-size:12
 .genre-choice{display:flex;gap:6px;align-items:center;margin:5px 0;font-size:12px}.genre-choice input{width:auto}#genreStatus{white-space:pre-wrap}#genreResults .ok{white-space:pre-wrap}.country-section{border-top:1px solid #484848;margin-top:16px;padding-top:14px}</style>
 </head>
 <body>
-<h2>♫ Last.fm Radio <span class="small muted">v2.4.5</span></h2>
+<h2>♫ Last.fm Radio <span class="small muted">v2.4.6</span></h2>
 <div class="tabs" role="tablist" aria-label="Sections Last.fm Radio">
 <button class="tab active" data-tab="discovery">Découverte</button><button class="tab" data-tab="tags">Tags</button><button class="tab" data-tab="friends">Utilisateurs</button><button class="tab" data-tab="genres">Genres</button><button class="tab" data-tab="infos">Infos</button><button class="tab" data-tab="settings">Paramètres</button>
 </div>
@@ -1268,7 +1268,7 @@ async function infoLoad(force=false){const serial=++infoState.serial;infoState.c
  root.append(infoNode('p',bio||infoText('Aucune présentation disponible.','No description available.')));
  if(fallbackFailed)root.append(infoNode('p',infoText('La recherche du texte anglais a échoué. Réessaie avec Actualiser.','English lookup failed. Try Refresh.')));
  const tags=asArray((data.tags||data.toptags)?.tag).map(t=>t.name).filter(Boolean);if(tags.length)root.append(infoNode('p',tags.join(' · ')));
- const stats=[];if(data.listeners)stats.push(Number(data.listeners).toLocaleString()+' '+infoText('auditeurs','listeners'));if(data.playcount)stats.push(Number(data.playcount).toLocaleString()+' '+infoText('écoutes','plays'));if(stats.length)root.append(infoNode('p',stats.join(' · ')));
+ const stats=[],counts=kind==='artist'?(data.stats||{}):data;for(const [value,fr,en]of [[counts.listeners,'auditeurs','listeners'],[counts.playcount??counts.plays,'écoutes','plays']]){if(value!==undefined&&value!==null&&String(value).trim()!==''&&Number.isFinite(Number(value))&&Number(value)>=0)stats.push(Number(value).toLocaleString(UI_LANG==='en'?'en-GB':'fr-FR')+' '+infoText(fr,en));}if(stats.length)root.append(infoNode('p',stats.join(' · ')));
  if(kind==='album'){if(data.releasedate?.trim())root.append(infoNode('p',infoText('Sortie : ','Released: ')+data.releasedate.trim()));const tracks=asArray(data.tracks?.track);if(tracks.length){const ol=document.createElement('ol');for(const t of tracks){const li=infoNode('li',t.name);ol.append(li);}root.append(ol);}}
  const url=kind==='artist'?lastUrl.artist(data.name||artist):kind==='album'?'https://www.last.fm/music/'+encodeURIComponent(params.artist)+'/'+encodeURIComponent(album):lastUrl.track(artist,data.name||c.title);
  $('info-source').append(linkTo(infoText('Source : Last.fm','Source: Last.fm'),url),document.createTextNode(' · '+infoText('Texte contributif · CC BY-SA, conditions supplémentaires possibles.','User-contributed text · CC BY-SA; additional terms may apply.')));$('info-status').textContent=$('info-follow').checked?infoText('Suivi de lecture','Following playback'):($('info-follow-selection').checked?infoText('Suivi de la sélection Foobar','Following Foobar selection'):infoText('Consultation figée','Pinned information'));
