@@ -2,6 +2,27 @@
 
 Notable changes to Last.fm Radio for foobar2000 are recorded here, with the latest version first.
 
+## 2.4.2 - 2026-10-29
+
+### Added
+
+- Info tab with Artist, Album and Track views.
+- Playback following, focused-track lookup from Foobar, and pinned information from a local result's right-click menu.
+- Artist biographies, album descriptions and track lists, track descriptions, tags and listening statistics where returned by Last.fm.
+- Twelve preferred information languages, saved independently of the interface language.
+- Bounded 24-hour response cache, refresh control, source links and text attribution.
+
+### Fixed
+
+- Artist and album descriptions missing in the preferred language now fall back to English, with an explicit notice.
+- Empty or attribution-only text no longer prevents checking for an available summary or English description.
+
+### Notes
+
+- Local development versions 2.4.0 and 2.4.1 were not published separately; their changes are included here.
+- The language fallback was checked against live Last.fm responses for John Wolfington. UI flows, language persistence and fallback rendering were tested with simulated responses; broader live Foobar testing remains ongoing.
+- This update is available in the repository's `index.html`. Previously published release ZIPs are unchanged.
+
 ## [2.3.1] - 2026-10-29
 
 ### Added
