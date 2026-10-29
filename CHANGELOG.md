@@ -2,6 +2,25 @@
 
 Notable changes to Last.fm Radio for foobar2000 are recorded here, with the latest version first.
 
+## 2.4.5 - 2026-10-29
+
+### Added
+
+- Continuous **Follow Foobar selection** mode in Info, independent of the currently playing track.
+- Saved selection-following preference, with mutually exclusive playback and selection modes.
+- Debounced updates when the playlist focus, selection, active playlist or metadata changes.
+
+### Fixed
+
+- Info shows a clear empty-state message when no track is available, clears the previous information and avoids a Last.fm lookup.
+- Discovery shows “Nothing is playing” instead of raw `<invalid parameters>` placeholders.
+
+### Notes
+
+- Local development versions 2.4.3 and 2.4.4 were not published separately; their fixes are included here.
+- Selection following has been confirmed working by the maintainer in Foobar. Empty-state handling and mode switching also passed local tests.
+- This update is available in the repository's `index.html`. Previously published release ZIPs are unchanged.
+
 ## 2.4.2 - 2026-10-29
 
 ### Added
