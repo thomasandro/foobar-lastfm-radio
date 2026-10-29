@@ -9,7 +9,7 @@ See LICENSE for the full license text.
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Last.fm Radio 2.3.0</title>
+<title>Last.fm Radio 2.3.1</title>
 <style>
 :root {color-scheme:dark;font-family:Segoe UI,Arial,sans-serif}
 *{box-sizing:border-box}body{background:#191919;color:#ececec;margin:0;padding:16px;font-size:13px}
@@ -30,7 +30,7 @@ details summary{cursor:pointer;font-weight:600;margin:3px 0}.notice{font-size:12
 .genre-choice{display:flex;gap:6px;align-items:center;margin:5px 0;font-size:12px}.genre-choice input{width:auto}#genreStatus{white-space:pre-wrap}#genreResults .ok{white-space:pre-wrap}.country-section{border-top:1px solid #484848;margin-top:16px;padding-top:14px}</style>
 </head>
 <body>
-<h2>♫ Last.fm Radio <span class="small muted">v2.3.0</span></h2>
+<h2>♫ Last.fm Radio <span class="small muted">v2.3.1</span></h2>
 <div class="tabs" role="tablist" aria-label="Sections Last.fm Radio">
 <button class="tab active" data-tab="discovery">Découverte</button><button class="tab" data-tab="tags">Tags</button><button class="tab" data-tab="friends">Utilisateurs</button><button class="tab" data-tab="genres">Genres</button><button class="tab" data-tab="settings">Paramètres</button>
 </div>
@@ -189,6 +189,42 @@ function trackLinks(artist,title,prefix=''){
   span.append(linkTo(artist,lastUrl.artist(artist)),document.createTextNode(' - '),linkTo(title,lastUrl.track(artist,title)));
   return span;
 }
+
+// Local-result actions. Paths are re-resolved in the library before queue changes.
+let localMenu=null,localActionBusy=false;
+const localLabel=(fr,en)=>UI_LANG==='en'?en:fr;
+function closeLocalMenu(){localMenu?.remove();localMenu=null;}
+function localActionNotice(text){let node=document.getElementById('local-action-notice');if(!node){node=document.createElement('div');node.id='local-action-notice';node.setAttribute('role','status');node.style.cssText='position:fixed;bottom:12px;left:12px;right:12px;padding:12px;background:#333;color:#fff;z-index:10002;border:1px solid #888';document.body.append(node);}node.textContent=text;clearTimeout(node.hideTimer);node.hideTimer=setTimeout(()=>node.remove(),6500);}
+function bindLocalMenu(row,track){if(!track.path)return;row.addEventListener('contextmenu',e=>{e.preventDefault();closeLocalMenu();const menu=document.createElement('div');localMenu=menu;menu.setAttribute('role','menu');menu.style.cssText='position:fixed;z-index:10001;background:#292929;padding:5px;border:1px solid #777;box-shadow:0 4px 18px #0008;max-width:95vw';
+ const choices=[['last',localLabel('Ouvrir sur Last.fm','Open on Last.fm')],['append',localLabel('Ajouter à la playlist en cours','Add to current playlist')],['queue',localLabel('Ajouter à la file d’attente','Add to playback queue')],['next',localLabel('Ajouter après le morceau en cours','Play after current track')]];
+ for(const [action,label]of choices){const b=document.createElement('button');b.textContent=label;b.setAttribute('role','menuitem');b.style.cssText='display:block;width:100%;text-align:left;margin:2px 0';b.disabled=localActionBusy&&action!=='last';b.onclick=()=>{closeLocalMenu();if(action==='last'){const a=linkTo('',lastUrl.track(track.artist,track.title));document.body.append(a);a.click();a.remove();}else runLocalAction(action,track);};menu.append(b);}
+ document.body.append(menu);menu.style.left=Math.max(0,Math.min(e.clientX,innerWidth-menu.offsetWidth-4))+'px';menu.style.top=Math.max(0,Math.min(e.clientY,innerHeight-menu.offsetHeight-4))+'px';menu.firstElementChild.focus();});}
+async function runLocalAction(action,track){if(localActionBusy)return;localActionBusy=true;let list,oldList;
+ try{
+  if(action==='append'){
+   const index=api.activePlaylist;if(index<0)throw Error(localLabel('Aucune playlist active.','No active playlist.'));
+   const before=playlistPaths(index);api.addPath(index,before.length?before.length:-1,track.path,false);
+   let confirmed=false;for(let n=0;n<40;n++){await sleep(200);const after=playlistPaths(index);if(after.length===before.length+1&&equalPath(after[before.length],track.path)&&before.every((p,i)=>equalPath(p,after[i]))){confirmed=true;break;}}
+   if(!confirmed)throw Error(localLabel('Ajout non confirmé : vérifie la playlist avant de recommencer.','Addition not confirmed: check the playlist before retrying.'));
+  }else{
+   const call=(method,params)=>fb2k.invoke(method,params);
+   list=await call('library.search',{query:'"%path%" IS "'+track.path.replace(/"/g,'""')+'"'});
+   const paths=await call('list.format',{list,script:'%path%'});const at=paths.findIndex(p=>equalPath(p,track.path));if(at<0)throw Error(localLabel('Morceau introuvable dans la bibliothèque.','Track no longer found in the library.'));
+   const handle=await call('list.item',{list,index:at});
+   if(action==='queue')await call('playlist.addItemToPlaybackQueue',{handle});
+   else{
+    const old=await call('playlist.getPlaybackQueueContents');oldList=await call('playlist.getPlaybackQueueHandles');
+    const count=await call('list.count',{list:oldList});if(count!==old.length)throw Error('Playback queue changed; retry.');
+    const handles=[];for(let i=0;i<count;i++)handles.push(await call('list.item',{list:oldList,index:i}));
+    const restore=async()=>{for(let i=0;i<old.length;i++){const q=old[i];if(q.playlistIndex>=0&&q.playlistItemIndex>=0)await call('playlist.addPlaylistItemToPlaybackQueue',{playlistIndex:q.playlistIndex,playlistItemIndex:q.playlistItemIndex});else await call('playlist.addItemToPlaybackQueue',{handle:handles[i]});}};
+    if(JSON.stringify(await call('playlist.getPlaybackQueueContents'))!==JSON.stringify(old))throw Error(localLabel('La file a changé ; recommence.','The queue changed; retry.'));try{await call('playlist.flushPlaybackQueue');await call('playlist.addItemToPlaybackQueue',{handle});await restore();}catch(e){try{await call('playlist.flushPlaybackQueue');await restore();}catch(r){throw Error(e.message+' / Queue restoration failed: '+r.message);}throw e;}
+   }
+  }
+  localActionNotice(localLabel('Morceau ajouté.','Track added.'));
+ }catch(e){localActionNotice(e.message||String(e));}
+ finally{for(const value of [list,oldList])if(value!==undefined)await fb2k.invoke('list.release',{list:value}).catch(()=>{});localActionBusy=false;}
+}
+document.addEventListener('pointerdown',e=>{if(localMenu&&!localMenu.contains(e.target))closeLocalMenu();});document.addEventListener('keydown',e=>{if(e.key==='Escape')closeLocalMenu();});window.addEventListener('blur',closeLocalMenu);document.addEventListener('scroll',closeLocalMenu,true);
 
 function clampNumber(value, min, max, fallback) {
   const n = Number(value);
@@ -385,7 +421,7 @@ function mixOrder(items,surprise) {
 function draw() {
   const container=$('results');container.replaceChildren();
   for(const [i,t] of selection.entries()) {
-    const row=document.createElement('div');row.className='track';
+    const row=document.createElement('div');row.className='track';bindLocalMenu(row,t);
     const title=document.createElement('strong');title.appendChild(trackLinks(t.artist,t.title,(i+1)+'. '));
     const details=document.createElement('div');details.className='small ok';
     details.textContent=t.versions+' version(s) ('+t.codecs.join(', ')+') · '+(searchMode==='friend' ? (t.playcount===null?uiText("Aimé sur Last.fm"):t.playcount+uiText(" écoutes")) : searchMode==='topArtist' ? (uiText("rang Last.fm #")+t.rank+(t.playcount!==null&&t.playcount!==undefined?' · '+t.playcount+uiText(" écoutes"):'')) : 'score '+t.score.toFixed(1)+' %');
@@ -857,7 +893,7 @@ function renderNetwork(results,profiles){
   const showExcluded=$('showInactive').checked;
   for(const [i,r] of results.entries()){
     if(r.activityStatus==='inactive'&&!showExcluded)continue;
-    const row=document.createElement('div');row.className='track';
+    const row=document.createElement('div');row.className='track';bindLocalMenu(row,t);
     if(r.activityStatus==='inactive')row.classList.add('excluded');
     const btn=document.createElement('button');btn.className='secondary';
     btn.textContent=uiText("Choisir · ")+r.score.toFixed(1)+' %';
@@ -1093,7 +1129,7 @@ async function collectTagged(options,key,matcher,request=tagRequest){
  tagCheckpoint();stats.local=candidates.length;return{items:pickTagged(candidates,target,surprise,order,maximum),stats,missing};
 }
 function saveTagPreferences(){try{localStorage.setItem('lastfmTagRadio.v1',JSON.stringify(Object.fromEntries(['tagInput','tagMode','tagCombine','tagOrder','tagSurprise','tagTarget','tagMaximum','tagBudget'].map(id=>[id,$(id).value]))));}catch(_){}}
-function drawTagResults(){const container=$('tagResults');container.replaceChildren();for(const [n,t]of selection.entries()){const row=document.createElement('div');row.className='track';row.append(trackLinks(t.artist,t.title,(n+1)+'. '));const detail=document.createElement('div');detail.className='small ok';detail.textContent=t.matchedTags.join(' · ')+(t.composedTags?.length?uiText(" (tag composé)"):'')+(t.playcount?' · '+t.playcount.toLocaleString(UI_LANG==='en'?'en-GB':'fr-FR')+uiText(" écoutes Last.fm"):'');row.append(detail);container.append(row);}if(!selection.length)container.textContent=uiText("Aucun titre local retenu dans les résultats examinés.");}
+function drawTagResults(){const container=$('tagResults');container.replaceChildren();for(const [n,t]of selection.entries()){const row=document.createElement('div');row.className='track';bindLocalMenu(row,t);row.append(trackLinks(t.artist,t.title,(n+1)+'. '));const detail=document.createElement('div');detail.className='small ok';detail.textContent=t.matchedTags.join(' · ')+(t.composedTags?.length?uiText(" (tag composé)"):'')+(t.playcount?' · '+t.playcount.toLocaleString(UI_LANG==='en'?'en-GB':'fr-FR')+uiText(" écoutes Last.fm"):'');row.append(detail);container.append(row);}if(!selection.length)container.textContent=uiText("Aucun titre local retenu dans les résultats examinés.");}
 function drawTagMissing(missing){
  const list=$('tagMissingArtists');list.replaceChildren();const artists=missing.missingArtists.slice().sort((a,b)=>b.weight-a.weight||b.prominence-a.prominence||a.name.localeCompare(b.name));
  $('tagMissingCount').textContent=artists.length?' · '+artists.length:'';
