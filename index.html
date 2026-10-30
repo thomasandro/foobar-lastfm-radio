@@ -9,7 +9,7 @@ See LICENSE for the full license text.
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Last.fm Radio 2.4.6</title>
+<title>Last.fm Radio 2.6.4</title>
 <style>
 :root {color-scheme:dark;font-family:Segoe UI,Arial,sans-serif}
 *{box-sizing:border-box}body{background:#191919;color:#ececec;margin:0;padding:16px;font-size:13px}
@@ -30,7 +30,7 @@ details summary{cursor:pointer;font-weight:600;margin:3px 0}.notice{font-size:12
 .genre-choice{display:flex;gap:6px;align-items:center;margin:5px 0;font-size:12px}.genre-choice input{width:auto}#genreStatus{white-space:pre-wrap}#genreResults .ok{white-space:pre-wrap}.country-section{border-top:1px solid #484848;margin-top:16px;padding-top:14px}</style>
 </head>
 <body>
-<h2>♫ Last.fm Radio <span class="small muted">v2.4.6</span></h2>
+<h2>♫ Last.fm Radio <span class="small muted">v2.6.4</span></h2>
 <div class="tabs" role="tablist" aria-label="Sections Last.fm Radio">
 <button class="tab active" data-tab="discovery">Découverte</button><button class="tab" data-tab="tags">Tags</button><button class="tab" data-tab="friends">Utilisateurs</button><button class="tab" data-tab="genres">Genres</button><button class="tab" data-tab="infos">Infos</button><button class="tab" data-tab="settings">Paramètres</button>
 </div>
@@ -42,14 +42,14 @@ details summary{cursor:pointer;font-weight:600;margin:3px 0}.notice{font-size:12
 <div class="panel">
 <div class="row">
 <div><label for="mode">Recherche</label><select id="mode">
-<option value="auto">Automatique</option><option value="track">Morceaux similaires</option><option value="artist">Artistes similaires</option><option value="topArtist">Top titres de l’artiste</option>
+<option value="multi">Radio multi-artistes</option><option value="auto" selected>Automatique</option><option value="track">Morceaux similaires</option><option value="artist">Artistes similaires</option><option value="topArtist">Top titres de l’artiste</option>
 </select></div>
 <div><label for="target">Titres souhaités</label><input type="number" id="target" min="1" max="200" value="50"></div>
 <div><label for="threshold">Score minimum (%)</label><input type="number" id="threshold" min="0" max="100" value="10"></div>
 <div id="surpriseBox"><label for="surprise">Surprise (0–100)</label><input type="range" id="surprise" min="0" max="100" step="5" value="40"><span id="surpriseValue">40</span></div>
 <div id="topArtistOptions" hidden><label for="topOrder">Ordre du Top artiste</label><select id="topOrder"><option value="popular">Popularité décroissante</option><option value="random">Aléatoire</option></select><label><input type="checkbox" id="topVersions"> Inclure plusieurs versions du même morceau</label></div>
 </div>
-<div class="small muted" style="margin-top:10px">Seuls les titres présents dans ta bibliothèque sont sélectionnés. Aucun filtre de codec. Nouvelle sélection à chaque recherche : le curseur Surprise favorise des titres moins attendus.</div>
+<div id="multi-options" hidden><label id="multi-label" for="multi-artists">Artistes de départ (2 à 5, un par ligne)</label><button id="multi-from-selection" class="secondary" type="button">Remplir depuis la sélection Foobar</button><button id="multi-from-browser" hidden class="secondary" type="button">Depuis Smooth Browser</button><p id="multi-selection-status" class="small muted" role="status"></p><textarea id="multi-artists" rows="5" style="width:100%;background:#343434;color:#eee;border:1px solid #626262;padding:8px;border-radius:5px" placeholder="La Monte Young&#10;AMM&#10;Brian Eno"></textarea><div class="row"><div><label id="multi-blend-label" for="multi-blend">Mélange</label><select id="multi-blend"><option value="balanced">Équilibré</option><option value="common">Priorité aux artistes communs</option></select></div><div><label id="multi-limit-label" for="multi-limit">Maximum de titres par artiste</label><input id="multi-limit" type="number" min="1" max="20" value="3"></div></div><p id="multi-note" class="notice">Jusqu’à 60 artistes explorés au total. Les résultats dépendent des correspondances locales ; l’équilibre peut être imparfait.</p><button id="multi-stop" class="secondary" hidden>Arrêter</button></div><div class="small muted" style="margin-top:10px">Seuls les titres présents dans ta bibliothèque sont sélectionnés. Aucun filtre de codec. Nouvelle sélection à chaque recherche : le curseur Surprise favorise des titres moins attendus.</div>
 <div class="actions"><button id="search">Rechercher</button><button id="create" disabled>Créer la playlist</button></div>
 </div>
 <div class="panel">
@@ -108,7 +108,7 @@ details summary{cursor:pointer;font-weight:600;margin:3px 0}.notice{font-size:12
 <details class="panel"><summary>Titres absents du classement examiné</summary><p class="notice">Ces titres ne sont pas ajoutés à la playlist. Les variantes de nom peuvent fausser la détection.</p><div id="friendMissing" class="absent-list"></div></details>
 </div>
 <div id="tab-genres" class="tabpage" hidden><section class="panel"><h3>Genres et pays des albums sélectionnés</h3><p class="notice">Sélectionne une ou plusieurs pistes par album dans Foobar. Les albums de la bibliothèque sont traités en entier : le nombre de pistes figure dans l’aperçu. Hors bibliothèque, sélectionne un album complet à la fois. Aucun fichier n’est modifié avant Ajouter ou Remplacer.</p><label>Genres présélectionnés <select id="genreLimit"><option>3</option><option>4</option><option>5</option></select></label><label><input type="checkbox" id="genreFallback" checked> Utiliser les tags de l’artiste si ceux de l’album ne conviennent pas</label><div class="actions"><button id="genreSearch">Analyser la sélection</button><button id="genreClear" class="secondary">Annuler</button></div></section><div id="genreResults"></div><div class="panel"><div class="actions" aria-label="Écrire les valeurs sélectionnées"><button id="genreAdd">Ajouter GENRE</button><button id="genreReplace">Remplacer GENRE</button><button id="countryAdd">Ajouter COUNTRY</button><button id="countryReplace">Remplacer COUNTRY</button></div><p id="genreStatus" role="status" class="small muted">Sélectionne les albums puis lance l’analyse.</p></div></div>
-<div id="tab-infos" class="tabpage" hidden><div class="panel"><div class="actions"><button id="info-now">En cours</button><button id="info-selected" class="secondary">Sélection Foobar</button><button id="info-refresh" class="secondary">Actualiser</button></div><label><input type="checkbox" id="info-follow" checked> <span id="info-follow-label">Suivre la lecture</span></label><label><input type="checkbox" id="info-follow-selection"> <span id="info-selection-label">Suivre la sélection Foobar</span></label><label id="info-language-label" for="info-language">Langue préférée des infos</label><select id="info-language"><option value="fr">Français</option><option value="en">English</option></select><div class="actions" id="info-kinds"><button data-kind="artist">Artiste</button><button data-kind="album">Album</button><button data-kind="track">Morceau</button></div></div><section class="panel"><h3 id="info-heading"></h3><p id="info-status" class="small muted" role="status"></p><div id="info-content" style="white-space:pre-wrap;line-height:1.65"></div><p id="info-source" class="small muted"></p></section></div><div id="tab-settings" class="tabpage" hidden>
+<div id="tab-infos" class="tabpage" hidden><div class="panel"><div class="actions"><button id="info-now">En cours</button><button id="info-selected" class="secondary">Sélection Foobar</button><button id="info-refresh" class="secondary">Actualiser</button></div><label id="info-language-label" for="info-language">Langue préférée des infos</label><select id="info-language"><option value="fr">Français</option><option value="en">English</option></select><div class="actions"><select id="info-explore-mode" aria-label="Type d’exploration"><option value="artist">Artistes similaires</option><option value="topArtist">Top titres de cet artiste</option></select><button id="info-explore" disabled>Explorer cet artiste</button></div><div class="actions" id="info-kinds"><button data-kind="artist">Artiste</button><button data-kind="album">Album</button><button data-kind="track">Morceau</button></div></div><section class="panel"><h3 id="info-heading"></h3><p id="info-status" class="small muted" role="status"></p><div id="info-content" style="white-space:pre-wrap;line-height:1.65"></div><p id="info-source" class="small muted"></p></section></div><div id="tab-settings" class="tabpage" hidden>
 <div class="panel"><label for="uiLanguage">Langue / Language</label><select id="uiLanguage"><option value="fr">Français</option><option value="en">English</option></select><p class="notice" id="languageNote">Le changement de langue recharge le panneau. Les paramètres sont conservés ; l’aperçu sera réinitialisé.</p></div><div class="panel"><strong>Connexion Last.fm</strong>
 <label for="username">Mon identifiant Last.fm</label><input type="text" id="username" autocomplete="username" placeholder="Par exemple : votre_identifiant">
 <label for="key">Clé API Last.fm</label><input type="password" id="key" autocomplete="off" placeholder="Clé API personnelle">
@@ -236,7 +236,7 @@ function setStatus(text, error=false) {
 }
 let working=false, selection=[], source=null, searchMode='', latestStats={}, missingArtists=[], missingTracks=[];
 function setWorking(value) {
-  working=value;document.getElementById('uiLanguage').disabled=value;
+  working=value;if($('info-explore'))$('info-explore').disabled=value||!infoState.context?.artist;document.getElementById('uiLanguage').disabled=value;
   $('search').disabled=value;
   $('refresh').disabled=value;
   $('create').disabled=value || !selection.length || searchMode==='tags' || searchMode==='friend';
@@ -296,6 +296,9 @@ function makeLibraryMatcher() {
       if(longest)phrases.push(longest);
     }
     const queries=[];
+    // Short names (AMM, U2, Low...) need exact queries; broad HAS stays bounded.
+    const exact=String(artist||'').trim();
+    if(exact&&full.length<4){for(const field of ['artist','album artist'])queries.push(field+' IS "'+safeQuery(exact)+'"');}
     for(const phrase of [...new Set(phrases)]) {
       if(phrase.length<4)continue;
       for(const field of ['artist','album artist']) {
@@ -431,7 +434,7 @@ function draw() {
     const title=document.createElement('strong');title.appendChild(trackLinks(t.artist,t.title,(i+1)+'. '));
     const details=document.createElement('div');details.className='small ok';
     details.textContent=t.versions+' version(s) ('+t.codecs.join(', ')+') · '+(searchMode==='friend' ? (t.playcount===null?uiText("Aimé sur Last.fm"):t.playcount+uiText(" écoutes")) : searchMode==='topArtist' ? (uiText("rang Last.fm #")+t.rank+(t.playcount!==null&&t.playcount!==undefined?' · '+t.playcount+uiText(" écoutes"):'')) : 'score '+t.score.toFixed(1)+' %');
-    row.append(title,details);container.appendChild(row);
+    if(t.seedOrigins?.length){const origin=document.createElement('div');origin.className='small muted';origin.textContent=(UI_LANG==='en'?'From: ':'Via : ')+t.seedOrigins.join(' · ');row.append(title,details,origin);}else row.append(title,details);container.appendChild(row);
   }
   if(!selection.length) container.textContent=uiText("Aucun morceau local retenu.");
 }
@@ -644,12 +647,15 @@ async function fromTopArtist(track,key,target,matcher,multipleVersions,randomOrd
     warnings:[],stopped,maxPages}};
 }
 function updateDiscoveryMode() {
+  $('multi-options').hidden=$('mode').value!=='multi';
   const isTop=$('mode').value==='topArtist';
   $('topArtistOptions').hidden=!isTop;
   $('surpriseBox').hidden=isTop;
   $('threshold').disabled=isTop;
 }
-async function search() {
+async function search(artistOverride=null) {
+  if($('mode').value==='multi'&&typeof artistOverride!=='string')return searchMultiArtists();
+  artistOverride=typeof artistOverride==='string'?artistOverride.trim():'';
   if(working)return;
   setWorking(true);selection=[];source=null;missingArtists=[];missingTracks=[];$('summary').textContent='';$('results').replaceChildren();drawMissing();
   try {
@@ -659,9 +665,9 @@ async function search() {
     const minScore=clampNumber($('threshold').value,0,100,10);
     const surprise=clampNumber($('surprise').value,0,100,40);
     const mode=$('mode').value;
-    const track=await getCurrent();
-    if(!track.artist||!track.title)throw new Error(uiText("Aucun titre en cours identifiable."));
-    source=track;$('current').textContent=track.artist+' - '+track.title;
+    const track=artistOverride?{artist:artistOverride,title:''}:await getCurrent();
+    if(!track.artist||(!artistOverride&&!track.title))throw new Error(uiText("Aucun titre en cours identifiable."));
+    source=track;$('current').textContent=artistOverride?infoText('Exploration : ','Exploring: ')+track.artist:track.artist+' - '+track.title;
     const matcher=makeLibraryMatcher();
     let result;
     if(mode==='topArtist')result=await fromTopArtist(track,key,target,matcher,$('topVersions').checked,$('topOrder').value==='random');
@@ -1233,6 +1239,8 @@ uiStatic();
 </script>
 <script>
 // Information lookup is read-only; remote markup is always displayed as text.
+const infoFollow={playback:false,selection:false};
+function infoFollowButtons(){for(const [id,active] of [['info-now',infoFollow.playback],['info-selected',infoFollow.selection]]){$(id).classList.toggle('secondary',!active);$(id).setAttribute('aria-pressed',String(active));}}
 const infoState={context:null,kind:'artist',serial:0,controller:null,capture:0,entered:false};
 const infoText=(fr,en)=>UI_LANG==='en'?en:fr;
 function infoPlain(raw){const doc=new DOMParser().parseFromString(String(raw||''),'text/html');return (doc.body.textContent||'').replace(/Read more on Last.fm[\s\S]*$/,'').trim();}
@@ -1240,17 +1248,17 @@ function infoNode(tag,text){const n=document.createElement(tag);n.textContent=te
 function infoPref(key,fallback){try{return localStorage.getItem(key)||fallback;}catch{return fallback;}}
 const infoLanguages=[['fr','Français'],['en','English'],['de','Deutsch'],['es','Español'],['it','Italiano'],['ja','日本語'],['pl','Polski'],['pt','Português'],['ru','Русский'],['sv','Svenska'],['tr','Türkçe'],['zh','中文']];
 $('info-language').replaceChildren();for(const [code,native]of infoLanguages){const option=document.createElement('option');option.value=code;let translated;try{translated=new Intl.DisplayNames([UI_LANG],{type:'language'}).of(code);}catch{translated=code;}option.textContent=translated.toLocaleLowerCase()===native.toLocaleLowerCase()?native:translated+' — '+native;$('info-language').append(option);}
-const preferredInfoLanguage=infoPref('lastfm.info.language',UI_LANG);$('info-language').value=infoLanguages.some(([code])=>code===preferredInfoLanguage)?preferredInfoLanguage:UI_LANG;$('info-follow').checked=infoPref('lastfm.info.follow','yes')==='yes';
-if(UI_LANG==='en'){for(const [id,text]of Object.entries({'info-now':'Now playing','info-selected':'Foobar selection','info-refresh':'Refresh','info-follow-label':'Follow playback','info-language-label':'Preferred information language'}))$(id).textContent=text;}
+const preferredInfoLanguage=infoPref('lastfm.info.language',UI_LANG);$('info-language').value=infoLanguages.some(([code])=>code===preferredInfoLanguage)?preferredInfoLanguage:UI_LANG;infoFollow.playback=infoPref('lastfm.info.follow','yes')==='yes';
+if(UI_LANG==='en'){for(const [id,text]of Object.entries({'info-now':'Now playing','info-selected':'Foobar selection','info-refresh':'Refresh','info-language-label':'Preferred information language'}))$(id).textContent=text;}
 for(const b of $('info-kinds').children){b.textContent=({artist:infoText('Artiste','Artist'),album:'Album',track:infoText('Morceau','Track')})[b.dataset.kind];b.onclick=()=>{infoState.kind=b.dataset.kind;infoLoad();};}
-function infoRemember(){try{localStorage.setItem('lastfm.info.language',$('info-language').value);localStorage.setItem('lastfm.info.follow',$('info-follow').checked?'yes':'no');}catch{}}
-function infoEmpty(selected){++infoState.serial;infoState.controller?.abort();infoState.context=null;$('info-heading').textContent=infoText('Informations','Information');$('info-content').replaceChildren();$('info-source').replaceChildren();$('info-status').textContent=selected?infoText('Sélectionne une piste dans Foobar pour afficher ses informations.','Select a track in Foobar to show its information.'):infoText('Aucun morceau en cours. Lance la lecture ou choisis une piste avec « Sélection Foobar ».','Nothing is playing. Start playback or choose a track with “Foobar selection”.');}
+function infoRemember(){infoFollowButtons();try{localStorage.setItem('lastfm.info.language',$('info-language').value);localStorage.setItem('lastfm.info.follow',infoFollow.playback?'yes':'no');}catch{}}
+function infoEmpty(selected){++infoState.serial;infoState.controller?.abort();infoState.context=null;infoState.resolvedArtist='';$('info-explore').disabled=true;$('info-heading').textContent=infoText('Informations','Information');$('info-content').replaceChildren();$('info-source').replaceChildren();$('info-status').textContent=selected?infoText('Sélectionne une piste dans Foobar pour afficher ses informations.','Select a track in Foobar to show its information.'):infoText('Aucun morceau en cours. Lance la lecture ou choisis une piste avec « Sélection Foobar ».','Nothing is playing. Start playback or choose a track with “Foobar selection”.');}
 async function infoCapture(selected=false){const token=++infoState.capture;let list;
  try{if(!selected){const playback=await fb2k.invoke('playback.getState');if(token!==infoState.capture)return;if(!playback?.isPlaying&&!playback?.isPaused){infoEmpty(false);return;}}let c;if(selected){const index=await fb2k.invoke('playlist.getActive');if(index<0)throw Error(infoText('Aucune playlist active.','No active playlist.'));const focus=await fb2k.invoke('playlist.getFocusedItem',{index});if(focus<0)throw Error(infoText('Aucune piste sélectionnée.','No focused track.'));list=await fb2k.invoke('playlist.getItemHandles',{index});const handle=await fb2k.invoke('list.item',{list,index:focus});c={};for(const [k,script]of Object.entries({artist:'$meta(artist,0)',albumArtist:'%album artist%',album:'$meta(album)',title:'%title%'}))c[k]=await fb2k.invoke('handle.formatTitle',{handle,script});}else{c={};for(const [k,text]of Object.entries({artist:'$meta(artist,0)',albumArtist:'%album artist%',album:'$meta(album)',title:'%title%'}))c[k]=await fb2k.invoke('playback.getFormattedText',{text});}
- if(token!==infoState.capture)return;if(!c.artist||c.artist==='?'||/^<invalid parameters>$/i.test(String(c.artist).trim())){infoEmpty(selected);return;}if(!c.artist)throw Error(infoText('Aucun artiste identifiable.','No identifiable artist.'));infoState.context=c;await infoLoad();
+ if(token!==infoState.capture)return;if(!c.artist||c.artist==='?'||/^<invalid parameters>$/i.test(String(c.artist).trim())){infoEmpty(selected);return;}if(!c.artist)throw Error(infoText('Aucun artiste identifiable.','No identifiable artist.'));infoState.context=c;infoState.resolvedArtist='';$('info-explore').disabled=working;await infoLoad();
  }catch(e){if(token===infoState.capture){if(/invalid parameters|Aucune playlist active|Aucune piste sélectionnée|No active playlist|No focused track/i.test(e.message||''))infoEmpty(selected);else $('info-status').textContent=e.message;}}finally{if(list!==undefined)await fb2k.invoke('list.release',{list}).catch(()=>{});}}
-async function infoFromResult(track){++infoState.capture;$('info-follow-selection').checked=false;try{localStorage.setItem('lastfm.info.followSelection','no');}catch{}$('info-follow').checked=false;infoRemember();infoState.context={...track};infoState.entered=true;switchTab('infos');await infoLoad();}
-function infoEnter(){if(!infoState.entered||$('info-follow').checked||$('info-follow-selection').checked){infoState.entered=true;infoCapture($('info-follow-selection').checked);}}
+async function infoFromResult(track){++infoState.capture;infoFollow.selection=false;try{localStorage.setItem('lastfm.info.followSelection','no');}catch{}infoFollow.playback=false;infoRemember();infoState.context={...track};infoState.resolvedArtist='';$('info-explore').disabled=working;infoState.entered=true;switchTab('infos');await infoLoad();}
+function infoEnter(){if(!infoState.entered||infoFollow.playback||infoFollow.selection){infoState.entered=true;infoCapture(infoFollow.selection);}}
 async function infoFetch(method,params,force,signal){const id=JSON.stringify([method,params]),key='lastfm.info.cache.v1';let cache={};try{cache=JSON.parse(localStorage.getItem(key)||'{}');}catch{}const hit=cache[id];if(!force&&hit&&Date.now()-hit.time<86400000)return hit.data;const apiKey=$('key').value.trim();if(!apiKey)throw Error(infoText('Renseigne la clé API dans Paramètres.','Enter your API key in Settings.'));const q=new URLSearchParams({method,...params,api_key:apiKey,format:'json',autocorrect:'1'}),r=await fetch('https://ws.audioscrobbler.com/2.0/?'+q,{signal});if(!r.ok)throw Error('Last.fm HTTP '+r.status);const data=await r.json();if(data.error)throw Error('Last.fm: '+data.message);cache[id]={time:Date.now(),data};try{localStorage.setItem(key,JSON.stringify(Object.fromEntries(Object.entries(cache).sort((a,b)=>b[1].time-a[1].time).slice(0,60))));}catch{}return data;}
 async function infoLoad(force=false){const serial=++infoState.serial;infoState.controller?.abort();const c=infoState.context,kind=infoState.kind,lang=$('info-language').value;const root=$('info-content');root.replaceChildren();$('info-source').replaceChildren();for(const b of $('info-kinds').children)b.classList.toggle('secondary',b.dataset.kind!==kind);if(!c)return;const controller=new AbortController();infoState.controller=controller;const timer=setTimeout(()=>controller.abort(),20000);$('info-heading').textContent=kind==='artist'?c.artist:c.artist+' — '+(kind==='album'?(c.album||'…'):c.title);$('info-status').textContent=infoText('Chargement…','Loading…');
  try{let artist=c.artist,album=c.album;
@@ -1258,6 +1266,7 @@ async function infoLoad(force=false){const serial=++infoState.serial;infoState.c
  if(kind==='album'&&!album)throw Error(infoText('Album non renseigné pour ce résultat.','No album available for this result.'));
  const params=kind==='artist'?{artist,lang}:kind==='album'?{artist:c.albumArtist||artist,album,lang}:{artist,track:c.title};
  const response=await infoFetch(kind+'.getInfo',params,force,controller.signal);if(serial!==infoState.serial)return;const data=response[kind];if(!data)throw Error(infoText('Aucune information disponible.','No information available.'));
+ infoState.resolvedArtist=kind==='artist'?(data.name||artist):(typeof data.artist==='string'?data.artist:data.artist?.name)||artist;
  $('info-heading').textContent=kind==='artist'?data.name:artist+' — '+(data.name||album||c.title);
  const description=d=>{const section=kind==='artist'?d.bio:d.wiki;return infoPlain(section?.content)||infoPlain(section?.summary);};let bio=description(data),fallbackEnglish=false,fallbackFailed=false;
  if(!bio&&kind!=='track'&&lang!=='en'){
@@ -1271,20 +1280,79 @@ async function infoLoad(force=false){const serial=++infoState.serial;infoState.c
  const stats=[],counts=kind==='artist'?(data.stats||{}):data;for(const [value,fr,en]of [[counts.listeners,'auditeurs','listeners'],[counts.playcount??counts.plays,'écoutes','plays']]){if(value!==undefined&&value!==null&&String(value).trim()!==''&&Number.isFinite(Number(value))&&Number(value)>=0)stats.push(Number(value).toLocaleString(UI_LANG==='en'?'en-GB':'fr-FR')+' '+infoText(fr,en));}if(stats.length)root.append(infoNode('p',stats.join(' · ')));
  if(kind==='album'){if(data.releasedate?.trim())root.append(infoNode('p',infoText('Sortie : ','Released: ')+data.releasedate.trim()));const tracks=asArray(data.tracks?.track);if(tracks.length){const ol=document.createElement('ol');for(const t of tracks){const li=infoNode('li',t.name);ol.append(li);}root.append(ol);}}
  const url=kind==='artist'?lastUrl.artist(data.name||artist):kind==='album'?'https://www.last.fm/music/'+encodeURIComponent(params.artist)+'/'+encodeURIComponent(album):lastUrl.track(artist,data.name||c.title);
- $('info-source').append(linkTo(infoText('Source : Last.fm','Source: Last.fm'),url),document.createTextNode(' · '+infoText('Texte contributif · CC BY-SA, conditions supplémentaires possibles.','User-contributed text · CC BY-SA; additional terms may apply.')));$('info-status').textContent=$('info-follow').checked?infoText('Suivi de lecture','Following playback'):($('info-follow-selection').checked?infoText('Suivi de la sélection Foobar','Following Foobar selection'):infoText('Consultation figée','Pinned information'));
+ $('info-source').append(linkTo(infoText('Source : Last.fm','Source: Last.fm'),url),document.createTextNode(' · '+infoText('Texte contributif · CC BY-SA, conditions supplémentaires possibles.','User-contributed text · CC BY-SA; additional terms may apply.')));$('info-status').textContent=infoFollow.playback?infoText('Suivi de lecture','Following playback'):(infoFollow.selection?infoText('Suivi de la sélection Foobar','Following Foobar selection'):infoText('Consultation figée','Pinned information'));
  }catch(e){if(serial===infoState.serial)$('info-status').textContent=e.name==='AbortError'?infoText('Délai de réponse dépassé.','Request timed out.'):e.message;}finally{clearTimeout(timer);}}
-$('info-now').onclick=()=>{$('info-follow').checked=true;infoRemember();infoCapture();};$('info-selected').onclick=()=>{$('info-follow').checked=false;infoRemember();infoCapture(true);};$('info-refresh').onclick=()=>infoLoad(true);$('info-language').onchange=()=>{infoRemember();infoLoad();};$('info-follow').onchange=()=>{infoRemember();if($('info-follow').checked)infoCapture();};
-if(globalThis.fb2k)for(const event of ['playback:trackChanged','playback:dynamicTrackInfo','playback:stopped'])fb2k.on(event,()=>{if($('info-follow').checked&&!$('tab-infos').hidden)infoCapture();});
+$('info-now').onclick=()=>{infoFollow.playback=true;infoRemember();infoCapture();};$('info-selected').onclick=()=>{infoFollow.playback=false;infoRemember();infoCapture(true);};$('info-refresh').onclick=()=>infoLoad(true);$('info-language').onchange=()=>{infoRemember();infoLoad();};
+if(globalThis.fb2k)for(const event of ['playback:trackChanged','playback:dynamicTrackInfo','playback:stopped'])fb2k.on(event,()=>{if(infoFollow.playback&&!$('tab-infos').hidden)infoCapture();});
 </script><script>
-$('info-follow-selection').checked=infoPref('lastfm.info.followSelection','no')==='yes';
-if($('info-follow-selection').checked)$('info-follow').checked=false;
-if(UI_LANG==='en')$('info-selection-label').textContent='Follow Foobar selection';
-function infoFollowSelection(enabled){$('info-follow-selection').checked=enabled;if(enabled)$('info-follow').checked=false;try{localStorage.setItem('lastfm.info.followSelection',enabled?'yes':'no');}catch{}infoRemember();}
-$('info-follow-selection').onchange=()=>{infoFollowSelection($('info-follow-selection').checked);if($('info-follow-selection').checked)infoCapture(true);};
+infoFollow.selection=infoPref('lastfm.info.followSelection','no')==='yes';
+if(infoFollow.selection)infoFollow.playback=false;infoFollowButtons();
+
+function infoFollowSelection(enabled){infoFollow.selection=enabled;if(enabled)infoFollow.playback=false;try{localStorage.setItem('lastfm.info.followSelection',enabled?'yes':'no');}catch{}infoRemember();}
+
 $('info-selected').onclick=()=>{infoFollowSelection(true);infoCapture(true);};
-$('info-now').onclick=()=>{infoFollowSelection(false);$('info-follow').checked=true;infoRemember();infoCapture();};
-$('info-follow').onchange=()=>{if($('info-follow').checked)infoFollowSelection(false);infoRemember();if($('info-follow').checked)infoCapture();};
+$('info-now').onclick=()=>{infoFollowSelection(false);infoFollow.playback=true;infoRemember();infoCapture();};
+
 let infoSelectionTimer;
-if(globalThis.fb2k)for(const event of ['playlist:focusChanged','playlist:selectionChanged','playlist:activated','playlist:itemsModified'])fb2k.on(event,()=>{if(!$('info-follow-selection').checked||$('tab-infos').hidden)return;clearTimeout(infoSelectionTimer);infoSelectionTimer=setTimeout(()=>infoCapture(true),180);});
+if(globalThis.fb2k)for(const event of ['playlist:focusChanged','playlist:selectionChanged','playlist:activated','playlist:itemsModified'])fb2k.on(event,()=>{if(!infoFollow.selection||$('tab-infos').hidden)return;clearTimeout(infoSelectionTimer);infoSelectionTimer=setTimeout(()=>infoCapture(true),180);});
+</script><script>
+if(UI_LANG==='en'){$('info-explore').textContent='Explore this artist';$('info-explore-mode').setAttribute('aria-label','Exploration type');$('info-explore-mode').options[0].textContent='Similar artists';$('info-explore-mode').options[1].textContent='Artist top tracks';}
+$('info-explore-mode').value=infoPref('lastfm.info.exploreMode','artist');if(!$('info-explore-mode').value)$('info-explore-mode').value='artist';
+$('info-explore-mode').onchange=()=>{try{localStorage.setItem('lastfm.info.exploreMode',$('info-explore-mode').value);}catch{}};
+$('info-explore').onclick=async()=>{if(working||!infoState.context?.artist)return;const artist=String(infoState.resolvedArtist||infoState.context.artist).trim();if(!artist||artist==='?'||artist.startsWith('<'))return;const mode=$('info-explore-mode').value;$('mode').value=mode;updateDiscoveryMode();switchTab('discovery');await search(artist);};
+</script><script>
+let multiController=null;
+function multiSeeds(text){const artists=[...new Map(String(text).split(/\r?\n/).map(s=>s.trim()).filter(Boolean).map(s=>[plainText(s),s])).values()];if(artists.length<2||artists.length>5)throw Error(infoText('Indique 2 à 5 artistes distincts, un par ligne.','Enter 2 to 5 distinct artists, one per line.'));return artists;}
+function multiChoose(pool,seeds,target,maximum,blend,surprise){const out=[],counts=new Map(),use=new Map(seeds.map(s=>[s,0]));let remaining=pool.slice();while(out.length<target){remaining=remaining.filter(t=>(counts.get(normalize(t.artist))||0)<maximum);if(!remaining.length)break;let eligible=remaining;
+ if(blend==='common'){const best=Math.max(...eligible.map(t=>t.seedOrigins.length));eligible=eligible.filter(t=>t.seedOrigins.length===best);}else{const available=seeds.filter(s=>eligible.some(t=>t.seedOrigins.includes(s)));const low=Math.min(...available.map(s=>use.get(s)));const wanted=new Set(available.filter(s=>use.get(s)===low));eligible=eligible.filter(t=>t.seedOrigins.some(s=>wanted.has(s)));}
+ const chosen=weightedPick(eligible.slice(),surprise);out.push(chosen);remaining=remaining.filter(t=>t!==chosen);counts.set(normalize(chosen.artist),(counts.get(normalize(chosen.artist))||0)+1);for(const s of chosen.seedOrigins)use.set(s,use.get(s)+1);
+ }return out;}
+async function multiRequest(method,params,key){const timer=setTimeout(()=>multiController?.abort(),20000);try{const r=await fetch('https://ws.audioscrobbler.com/2.0/?'+new URLSearchParams({method,...params,api_key:key,format:'json',autocorrect:'1'}),{signal:multiController.signal});if(!r.ok)throw Error('Last.fm HTTP '+r.status);const data=await r.json();if(data.error)throw Error('Last.fm : '+data.message+' (code '+data.error+')');return data;}finally{clearTimeout(timer);}}
+async function searchMultiArtists(){if(working)return;let seeds;try{seeds=multiSeeds($('multi-artists').value);}catch(e){setStatus(e.message,true);return;}const key=$('key').value.trim();if(!key){setStatus(uiText('Clé API manquante.'),true);return;}
+ const target=clampNumber($('target').value,1,200,50),maximum=clampNumber($('multi-limit').value,1,20,3),blend=$('multi-blend').value,surprise=clampNumber($('surprise').value,0,100,40),threshold=clampNumber($('threshold').value,0,100,10);
+ try{localStorage.setItem('lastfm.multi.v1',JSON.stringify({artists:$('multi-artists').value,maximum,blend}));}catch{}
+ multiController=new AbortController();setWorking(true);$('multi-stop').hidden=false;for(const id of ['mode','multi-artists','multi-blend','multi-limit','multi-from-selection','multi-from-browser'])$(id).disabled=true;selection=[];source=null;searchMode='multi';missingArtists=[];missingTracks=[];$('results').replaceChildren();$('summary').textContent='';drawMissing();const candidates=new Map(),lists=[],warnings=[];let requests=0,examined=0;
+ try{for(const seed of seeds){setStatus(infoText('Recherche des proches de ','Finding similar artists for ')+seed);const data=await multiRequest('artist.getSimilar',{artist:seed,limit:'100'},key);requests++;const list=[{name:seed,weight:1},...asArray(data.similarartists?.artist).filter(a=>a?.name).map(a=>({name:a.name,weight:Number(a.match)||0}))];lists.push(list);for(const a of list){if(a.weight*100<threshold)continue;const id=normalize(a.name);let entry=candidates.get(id);if(!entry){entry={name:a.name,weights:new Map()};candidates.set(id,entry);}entry.weights.set(seed,Math.max(entry.weights.get(seed)||0,a.weight));}}
+ const ordered=[],seen=new Set();if(blend==='common')for(const a of [...candidates.values()].filter(a=>a.weights.size>1).sort((a,b)=>b.weights.size-a.weights.size||Math.max(...b.weights.values())-Math.max(...a.weights.values()))){ordered.push(a);seen.add(normalize(a.name));}
+ for(let rank=0;rank<=100;rank++)for(const list of lists){const a=list[rank],id=a&&normalize(a.name);if(id&&candidates.has(id)&&!seen.has(id)){seen.add(id);ordered.push(candidates.get(id));}}
+ const matcher=makeLibraryMatcher(),pool=[],known=new Set(),missing={missingArtists:[],missingTracks:[],missingKeys:new Set()};
+ for(const a of ordered.slice(0,60)){if(multiController.signal.aborted)throw new DOMException('Stopped','AbortError');examined++;setStatus(infoText('Exploration multi-artistes : ','Multi-artist exploration: ')+examined+'/'+Math.min(60,ordered.length)+' · '+a.name);const origins=[...a.weights.keys()],weight=Math.max(...a.weights.values());if(!matcher.hasArtist(a.name)){missing.missingArtists.push({name:a.name,weight});continue;}
+ try{const data=await multiRequest('artist.getTopTracks',{artist:a.name,limit:'100',page:'1'},key);requests++;let rank=0;for(const t of asArray(data.toptracks?.track)){rank++;const item=candidate(a.name,t.name,100*weight,matcher);if(!item){pushMissingTrack(missing,a.name,t.name,100*weight,true);continue;}const id=normalize(item.artist)+'|'+normalize(item.title);if(known.has(id))continue;known.add(id);pool.push({...item,source:'artist',rank,seedOrigins:origins});}}catch(e){if(e.name==='AbortError'||/code (10|26|29)/.test(e.message))throw e;warnings.push(a.name+' : '+e.message);}await sleep(180);}
+ selection=multiChoose(pool,seeds,target,maximum,blend,surprise);source={kind:'multi',artist:seeds.join(' + '),title:infoText('Radio multi-artistes','Multi-artist radio')};missingArtists=missing.missingArtists;missingTracks=missing.missingTracks;draw();drawMissing();$('current').textContent=infoText('Points de départ : ','Seeds: ')+seeds.join(' + ');setStatus(selection.length+' / '+target+infoText(' titres locaux sélectionnés.',' local tracks selected.'));$('summary').textContent=examined+infoText(' artistes examinés · ',' artists examined · ')+pool.length+infoText(' titres locaux candidats · ',' local candidate tracks · ')+requests+infoText(' requêtes Last.fm.',' Last.fm requests.')+(warnings.length?'\n'+warnings.length+infoText(' erreurs de requête signalées.',' request errors reported.'):'')+'\n'+seeds.map(s=>s+' : '+selection.filter(t=>t.seedOrigins.includes(s)).length).join(' · ');latestStats={examined,candidates:pool.length,warnings};
+ }catch(e){selection=[];source=null;$('results').replaceChildren();setStatus(e.name==='AbortError'?infoText('Recherche arrêtée ou délai de réponse dépassé. Aucun résultat partiel utilisé.','Search stopped or timed out. Partial results were discarded.'):e.message,true);}finally{multiController=null;$('multi-stop').hidden=true;for(const id of ['mode','multi-artists','multi-blend','multi-limit','multi-from-selection','multi-from-browser'])$(id).disabled=false;setWorking(false);}}
+$('multi-stop').onclick=()=>multiController?.abort();
+try{const saved=JSON.parse(localStorage.getItem('lastfm.multi.v1')||'null');if(saved){$('multi-artists').value=String(saved.artists||'');$('multi-limit').value=clampNumber(saved.maximum,1,20,3);$('multi-blend').value=saved.blend==='common'?'common':'balanced';}}catch{}
+if(UI_LANG==='en'){$('mode').querySelector('[value="multi"]').textContent='Multi-artist radio';$('multi-label').textContent='Seed artists (2 to 5, one per line)';$('multi-blend-label').textContent='Blend';$('multi-blend').options[0].textContent='Balanced';$('multi-blend').options[1].textContent='Prefer shared artists';$('multi-limit-label').textContent='Maximum tracks per artist';$('multi-note').textContent='Up to 60 artists examined in total. Results depend on local matches; the balance may be uneven.';$('multi-stop').textContent='Stop';}
+</script><script>
+if(UI_LANG==='en')$('multi-from-selection').textContent='Fill from Foobar selection';
+$('multi-from-selection').onclick=async()=>{
+ if(working)return;const button=$('multi-from-selection'),status=$('multi-selection-status');button.disabled=true;let list;
+ try{
+  const index=await fb2k.invoke('playlist.getActive');if(index<0)throw Error(infoText('Aucune playlist active.','No active playlist.'));
+  list=await fb2k.invoke('playlist.getSelectedItemHandles',{index});
+  const values=await fb2k.invoke('list.format',{list,script:'$if2($meta(album artist,0),$meta(artist,0))'});
+  if(!Array.isArray(values)||!values.length)throw Error(infoText('Sélectionne des pistes dans la playlist Foobar.','Select tracks in the Foobar playlist.'));
+  const artists=[...new Map(values.map(v=>String(v).trim()).filter(v=>v&&v!=='?'&&!/^<.*>$/.test(v)).map(v=>[plainText(v),v])).values()];
+  if(!artists.length)throw Error(infoText('Aucun artiste renseigné dans la sélection.','No artist metadata in the selection.'));
+  if(artists.length>5)throw Error(infoText('La sélection contient ','The selection contains ')+artists.length+infoText(' artistes : sélectionne au maximum 5 artistes. La liste actuelle est conservée.',' artists: select at most 5 artists. The current list is unchanged.'));
+  $('multi-artists').value=artists.join('\n');
+  try{localStorage.setItem('lastfm.multi.v1',JSON.stringify({artists:$('multi-artists').value,maximum:clampNumber($('multi-limit').value,1,20,3),blend:$('multi-blend').value}));}catch{}
+  status.textContent=artists.length+infoText(' artiste(s) ajouté(s) depuis la sélection.',' artist(s) filled from the selection.')+(artists.length<2?infoText(' Ajoute un second artiste pour lancer la radio.',' Add a second artist to start the radio.'):'');
+ }catch(e){status.textContent=e.message||String(e);}
+ finally{if(list!==undefined)await fb2k.invoke('list.release',{list}).catch(()=>{});button.disabled=working;}
+};
+</script><script>
+if(UI_LANG==='en')$('multi-from-browser').textContent='From Smooth Browser';
+$('multi-from-browser').onclick=async()=>{if(working)return;if(!await detectSmoothBrowser())return;const button=$('multi-from-browser'),status=$('multi-selection-status');button.disabled=true;try{const profile=String(await fb2k.invoke('component.getProfilePath')).replace(/[\\/]+$/,'');let data;try{data=JSON.parse(String(await fb2k.invoke('fs.readText',{path:profile+'\\smooth-browser-radio-selection.json',codePage:65001})).replace(/^\uFEFF/,''));}catch{throw Error(infoText('Recharge Smooth Browser 0.9.5 puis sélectionne des albums ou artistes. Vérifie aussi Read files dans WebView2.','Reload Smooth Browser 0.9.5 and select albums or artists. Also check WebView2 Read files.'));}
+ if(data.version!==1||data.session!==smoothBrowserPresence?.session||!Array.isArray(data.artists)||!['album','artist'].includes(data.mode))throw Error(infoText('Dans Smooth Browser, sélectionne des albums ou des artistes (pas des genres).','Select albums or artists in Smooth Browser, rather than genres.'));
+ const artists=[...new Map(data.artists.filter(a=>typeof a==='string').map(a=>a.trim()).filter(a=>a&&a!=='?').map(a=>[plainText(a),a])).values()];if(!artists.length)throw Error(infoText('Aucune sélection dans Smooth Browser.','No selection in Smooth Browser.'));if(artists.length>5)throw Error(infoText('Plus de 5 artistes sélectionnés dans Smooth Browser : réduis la sélection. La liste actuelle est conservée.','More than 5 artists selected in Smooth Browser: narrow the selection. The current list is unchanged.'));
+ $('multi-artists').value=artists.join('\n');try{localStorage.setItem('lastfm.multi.v1',JSON.stringify({artists:$('multi-artists').value,maximum:clampNumber($('multi-limit').value,1,20,3),blend:$('multi-blend').value}));}catch{}status.textContent=artists.length+infoText(' artiste(s) récupéré(s) depuis Smooth Browser.',' artist(s) imported from Smooth Browser.')+(artists.length<2?infoText(' Ajoute un second artiste.',' Add a second artist.'):'');
+ }catch(e){status.textContent=e.message||String(e);}finally{button.disabled=working;}};
+</script><script>
+</script><script>
+let smoothBrowserPresence=null,smoothBrowserChecking=false,smoothBrowserProfile='';
+function validSmoothBrowserPresence(value,now=Date.now()){return value?.version===1&&value.selectionVersion===1&&value.active===true&&typeof value.session==='string'&&value.session.length>0&&Number.isFinite(value.time)&&now-value.time>=-2000&&now-value.time<20000;}
+async function detectSmoothBrowser(){if(smoothBrowserChecking)return !!smoothBrowserPresence&&validSmoothBrowserPresence(smoothBrowserPresence);smoothBrowserChecking=true;try{if(!smoothBrowserProfile)smoothBrowserProfile=String(await fb2k.invoke('component.getProfilePath')).replace(/[\\/]+$/,'');const value=JSON.parse(String(await fb2k.invoke('fs.readText',{path:smoothBrowserProfile+'\\smooth-browser-radio-presence.json',codePage:65001})).replace(/^\uFEFF/,''));smoothBrowserPresence=validSmoothBrowserPresence(value)?value:null;}catch{smoothBrowserPresence=null;}finally{smoothBrowserChecking=false;$('multi-from-browser').hidden=!smoothBrowserPresence;}return !!smoothBrowserPresence;}
+const smoothBrowserDetectionTimer=setInterval(detectSmoothBrowser,5000);detectSmoothBrowser();window.addEventListener('pagehide',()=>clearInterval(smoothBrowserDetectionTimer));
 </script></body>
 </html>
