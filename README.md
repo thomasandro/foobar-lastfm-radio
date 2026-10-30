@@ -1,6 +1,6 @@
 # Last.fm Radio for foobar2000
 
-Version **2.4.6** · Windows · French / English interface
+Version **2.6.4** · Windows · French / English interface
 
 A local HTML panel for foobar2000's **foo_webview2** component. Discover music from your own library using Last.fm recommendations, tags and user charts, create playlists, and preview genre and country metadata before writing it to your files.
 
@@ -10,7 +10,7 @@ See [CHANGELOG.md](CHANGELOG.md) for changes between versions.
 
 ## Download
 
-Version 2.4.6 is available as a ready-to-install ZIP in [Releases](https://github.com/thomasandro/foobar-lastfm-radio/releases/tag/v2.4.6) and as the updated [`index.html`](index.html) in this repository. To update an existing installation, replace that file in the same location and reload the panel. Older release ZIPs retain their original version.
+Version 2.6.4 is available as a ready-to-install ZIP in [Releases](https://github.com/thomasandro/foobar-lastfm-radio/releases/tag/v2.6.4) and as the updated [`index.html`](index.html) in this repository. To update an existing installation, replace that file in the same location and reload the panel. Older release ZIPs retain their original version.
 
 Download the ready-to-install ZIP from [Releases](https://github.com/thomasandro/foobar-lastfm-radio/releases). The first public release is a **beta**: feedback from clean installations is welcome.
 
@@ -110,6 +110,7 @@ The menu is available in French and English. These actions do not write audio me
 
 Open **Info / Infos** to read Last.fm artist biographies, album descriptions and track lists, or track information where available.
 
+- The redundant follow-mode checkboxes have been removed. The **Now playing** and **Foobar selection** buttons select the follow mode and highlight the active choice.
 - **Now playing** enables playback following. Information refreshes while the Info tab is visible and when you return to it.
 - **Follow Foobar selection** automatically updates information when the focused track or active playlist changes, even while a different track is playing. The preference is saved locally. **Foobar selection** also enables this mode.
 - Playback following and selection following are mutually exclusive. **Now playing** switches back to playback following.
@@ -124,6 +125,33 @@ When nothing is playing or no track is available in the active playlist, the pan
 Artist, album and track views display Last.fm listener and play counts when provided. Missing or invalid counts are omitted; zero is shown as zero. These are Last.fm totals, not your local playback statistics.
 
 Availability and text length depend on Last.fm; not every artist, album or track has a description. This is not automatic translation. Last.fm source links and attribution are displayed with the information. The Info feature is read-only and requires no additional filesystem permissions or SMP relay.
+
+### Explore an artist from Info
+
+Choose **Similar artists** or **Artist top tracks**, then click **Explore this artist**. Discovery runs a search for the artist currently being inspected, without starting or changing playback. Existing Discovery settings still apply.
+
+### Multi-artist radio
+
+1. In Discovery, choose **Multi-artist radio**.
+2. Enter **2 to 5 distinct artists, one per line**, or use **Fill from Foobar selection** to replace the list from the selected playlist tracks. The import uses the first album artist, falling back to the first track artist, and removes duplicate names.
+3. Choose **Balanced** or **Prefer shared artists**, set the maximum tracks per artist, and adjust the existing track count, minimum score and Surprise settings.
+4. Search, review the local results, then create a playlist.
+
+Balanced mode tries to distribute results across the seed artists' recommendation pools. Shared mode prioritises artists found in more than one seed's examined similar-artist list; it is a priority rather than a strict intersection. Each result shows the seeds that contributed it.
+
+The search examines at most **60 candidate artists in total**, and up to the first 100 Last.fm top tracks for each locally present artist examined. Local matching and per-artist limits may prevent a full or evenly balanced result. Recommendation provenance and scores describe this search, not an objective stylistic relationship.
+
+**Stop** cancels the search and discards partial results. Seed text, blend mode and per-artist limit are remembered locally. An import containing more than five distinct artists leaves the current text unchanged; one imported artist can be completed manually before searching.
+
+### Optional Smooth Browser integration
+
+Last.fm Radio works independently of Smooth Browser. Manual artist entry and playlist-selection import require no additional panel or SMP relay.
+
+For users who already have the separate compatible **Smooth Browser 0.9.6** panel, **From Smooth Browser** appears automatically while a recent compatible presence signal is available. It imports selected album/artist groups directly, including library-source selections. Genre groups are not supported. This integration requires WebView2 **Read files** and Smooth Browser's selection/presence export; Smooth Browser is **not included in this archive**.
+
+There is no integration toggle in Settings. Without a compatible active panel, the button stays hidden. Detection is checked every five seconds; it expires after approximately 20 seconds without a signal. Reload both panels after updating Smooth Browser. Older standalone selection files do not enable the integration.
+
+The built-in foobar2000 **Album List** selection is not supported by this import. Use the playlist selection or enter artist names manually.
 
 ### Tags
 
