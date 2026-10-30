@@ -2,6 +2,31 @@
 
 Notable changes to Last.fm Radio for foobar2000 are recorded here, with the latest version first.
 
+## 2.6.4 - 2026-10-31
+
+### Added
+
+- Multi-artist radio with 2–5 seed artists, balanced or shared-artist priority, per-artist limits, Surprise, result provenance and cancellation.
+- Seed import from selected Foobar playlist tracks, with duplicate removal and input-limit feedback.
+- **Explore this artist** in Info, opening Similar artists or Artist top tracks in Discovery without changing playback.
+- Optional direct import from a compatible active Smooth Browser panel, detected automatically.
+
+### Fixed
+
+- Artists with names shorter than four characters, such as AMM, now receive exact local-library queries instead of being skipped.
+- Removed redundant Info follow-mode checkboxes; the Now playing and Foobar selection buttons retain mode switching and saved preferences.
+
+### Changed
+
+- Removed the Smooth Browser setting. Its button is hidden by default and appears only with a recent compatible presence signal.
+- Smooth Browser remains optional and is not bundled. The public panel works with manual seed entry and playlist-selection import alone.
+
+### Notes
+
+- Local development versions 2.5.0–2.6.3 were not published separately; their changes are grouped here.
+- Multi-artist selection, limits, deduplication, provenance, cancellation, imports and presence expiry passed local tests with simulated services. Broader live Foobar testing remains ongoing.
+- The new archive contains only index.html, README.md, CHANGELOG.md and LICENSE.
+
 ## 2.4.6 - 2026-10-29
 
 ### Fixed
