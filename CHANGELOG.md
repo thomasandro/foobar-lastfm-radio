@@ -2,6 +2,28 @@
 
 Notable changes to Last.fm Radio for foobar2000 are recorded here, with the latest version first.
 
+## 2.7.1 - 2026-11-07
+
+### Added
+
+- Choose a requested track count or a maximum playlist duration in Discovery, Tags and Users, including multi-artist radio and artist exploration from Info.
+- Show the actual selection duration and save playlist sizing preferences separately for each tab.
+- Choose **Now playing** or **Foobar selection** as the Discovery seed source, with the source choice saved locally. Selection mode does not require playback.
+
+### Changed
+
+- Duration mode uses the actual matched local file, keeps whole tracks within the selected maximum and excludes unknown or invalid durations. Ranking, Surprise and per-artist limits remain in effect; the result can be shorter than requested.
+- Discovery reads only the first selected track from an owned native handle-list snapshot, checks its bounds and releases the snapshot after reading. It avoids formatting the entire active playlist.
+- Relevant selection and playback events refresh the Discovery seed without automatically launching a Last.fm search.
+
+### Notes
+
+- Local development version 2.7.0 was not published separately; its playlist-duration features are included here.
+- Foobar selection in Discovery refers to the active playlist. The built-in Album List selection is not supported; optional Smooth Browser integration remains independent.
+- Duration mode is capped at 1,000 tracks. It preserves complete tracks rather than trimming audio.
+- The repository contains the 2.7.1 HTML and updated documentation. Previously published release ZIPs are unchanged.
+- Public-copy checks cover JavaScript syntax and the absence of local credentials and personal installation paths. Duration and seed-selection behavior also passed local simulated-service tests; this does not establish every workflow on every Foobar installation.
+
 ## 2.6.4 - 2026-10-31
 
 ### Added
@@ -116,3 +138,4 @@ Notable changes to Last.fm Radio for foobar2000 are recorded here, with the late
 
 [2.3.1]: https://github.com/thomasandro/foobar-lastfm-radio/commit/22229f79ff5d4560a7bea6a3911c5f27ad06fd5b
 [2.3.0]: https://github.com/thomasandro/foobar-lastfm-radio/tree/22229f79ff5d4560a7bea6a3911c5f27ad06fd5b%5E
+

@@ -1,6 +1,6 @@
 # Last.fm Radio for foobar2000
 
-Version **2.6.4** · Windows · French / English interface
+Version **2.7.1** · Windows · French / English interface
 
 A local HTML panel for foobar2000's **foo_webview2** component. Discover music from your own library using Last.fm recommendations, tags and user charts, create playlists, and preview genre and country metadata before writing it to your files.
 
@@ -10,7 +10,7 @@ See [CHANGELOG.md](CHANGELOG.md) for changes between versions.
 
 ## Download
 
-Version 2.6.4 is available as a ready-to-install ZIP in [Releases](https://github.com/thomasandro/foobar-lastfm-radio/releases/tag/v2.6.4) and as the updated [`index.html`](index.html) in this repository. To update an existing installation, replace that file in the same location and reload the panel. Older release ZIPs retain their original version.
+Version **2.7.1** is available as the updated [`index.html`](index.html) in this repository. To update an existing installation, replace that file in the same location and reload the panel; keep the same WebView2 storage profile to retain saved settings. The [latest published release ZIP](https://github.com/thomasandro/foobar-lastfm-radio/releases/tag/v2.6.4) is still **2.6.4** and does not include the changes described below.
 
 Download the ready-to-install ZIP from [Releases](https://github.com/thomasandro/foobar-lastfm-radio/releases). The first public release is a **beta**: feedback from clean installations is welcome.
 
@@ -86,14 +86,22 @@ Choose **Français** or **English** under **Settings → Langue / Language**. Th
 
 ### Discovery
 
-1. Play a track in foobar2000.
-2. Choose Automatic, Similar tracks, Similar artists, or Artist top tracks.
-3. Set the requested number of tracks and the Surprise level, then search.
+1. Choose **Now playing** to use the playing track, or **Foobar selection** to use the first selected track in the active playlist. Playback is not required in selection mode. The source choice is remembered.
+2. Choose Automatic, Similar tracks, Similar artists, Artist top tracks, or Multi-artist radio.
+3. Choose a target **track count** or **maximum duration**, set the Surprise level, then search.
 4. Review the selection and click **Create playlist**.
 
 Higher Surprise settings broaden sampling; they do not guarantee that the requested number of tracks can be found locally. The panel creates a new, uniquely named playlist and verifies the added paths and their order. Creating a playlist makes it active.
 
 Missing-artist and missing-track lists are informational. Matching depends on your local tags and may be affected by spelling variants, different editions and artist-name ambiguities.
+
+### Playlist size: track count or duration
+
+Discovery, Tags and Users each offer a choice between a requested number of tracks and a maximum duration in minutes. This also applies to multi-artist radio and searches started with **Explore this artist** in Info. Each tab remembers its own sizing settings.
+
+Duration mode uses the duration of the actual matched local file. It keeps whole tracks, excludes tracks with unknown or invalid durations and stays within the selected maximum. Ranking, Surprise and per-artist limits still apply, so the result may be shorter than requested. Duration mode has a safety cap of 1,000 tracks. The selection summary shows the actual total duration.
+
+In Discovery, **Foobar selection** reads the selected tracks of the active playlist, including the standard Foobar playlist view. It does **not** read the built-in Album List selection. Selection and playback events refresh the seed display without automatically starting a Last.fm search. Multi-artist radio continues to use its explicit seed list.
 
 ### Track context menu
 
@@ -263,5 +271,6 @@ This script and its documentation are distributed under the **MIT License**. See
 - Music metadata and recommendations are provided by [Last.fm](https://www.last.fm/). API use and Last.fm data remain subject to [Last.fm's API terms](https://www.last.fm/api/tos); the script's MIT License does not relicense that data.
 
 This project is independent and is not endorsed by Last.fm or the foobar2000/component developers.
+
 
 
