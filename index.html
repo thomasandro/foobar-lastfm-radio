@@ -9,7 +9,7 @@ See LICENSE for the full license text.
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Last.fm Radio 2.7.1</title>
+<title>Last.fm Radio 2.7.2</title>
 <style>
 :root {color-scheme:dark;font-family:Segoe UI,Arial,sans-serif}
 *{box-sizing:border-box}body{background:#191919;color:#ececec;margin:0;padding:16px;font-size:13px}
@@ -30,7 +30,7 @@ details summary{cursor:pointer;font-weight:600;margin:3px 0}.notice{font-size:12
 .genre-choice{display:flex;gap:6px;align-items:center;margin:5px 0;font-size:12px}.genre-choice input{width:auto}#genreStatus{white-space:pre-wrap}#genreResults .ok{white-space:pre-wrap}.country-section{border-top:1px solid #484848;margin-top:16px;padding-top:14px}</style>
 </head>
 <body>
-<h2>♫ Last.fm Radio <span class="small muted">v2.7.1</span></h2>
+<h2>♫ Last.fm Radio <span class="small muted">v2.7.2</span></h2>
 <div class="tabs" role="tablist" aria-label="Sections Last.fm Radio">
 <button class="tab active" data-tab="discovery">Découverte</button><button class="tab" data-tab="tags">Tags</button><button class="tab" data-tab="friends">Utilisateurs</button><button class="tab" data-tab="genres">Genres</button><button class="tab" data-tab="infos">Infos</button><button class="tab" data-tab="settings">Paramètres</button>
 </div>
@@ -132,6 +132,15 @@ function playlistGoalFits(item,items){
  return item.duration<=playlistGoalLimit()-used+.000001;
 }
 function playlistGoalPoolEnough(items,target){return activePlaylistGoal?.mode==='duration'?playlistSeconds(items)>=playlistGoalLimit():items.length>=target;}
+// Duration searches retain their actual selection while expanding the candidates.
+function playlistGoalNotice(items){
+ if(activePlaylistGoal?.mode!=='duration')return '';
+ const actual=playlistSeconds(items),requested=activePlaylistGoal.seconds,missing=requested-actual;
+ if(missing<1)return '';
+ return '\n\n'+playlistGoalText('Durée demandée non atteinte : ','Requested duration not reached: ')+playlistDuration(actual)+' / '+playlistDuration(requested)+playlistGoalText(' — il manque ',' — short by ')+playlistDuration(Math.ceil(missing))+'.\n'+
+  playlistGoalText('Résultat limité aux recommandations examinées, aux morceaux présents dans ta bibliothèque et aux filtres choisis.','Results are limited to the recommendations examined, tracks available in your library and the selected filters.');
+}
+
 function playlistGoalSummary(items,target){
  const seconds=playlistSeconds(items),prefix=items.length+playlistGoalText(' titres · ',' tracks · ');
  if(activePlaylistGoal?.mode==='duration')return prefix+playlistDuration(seconds)+' / '+playlistDuration(activePlaylistGoal.seconds)+playlistGoalText(' maximum',' maximum')+(activePlaylistGoal.unknown.size?' · '+activePlaylistGoal.unknown.size+playlistGoalText(' durée(s) inconnue(s) écartée(s)',' unknown duration(s) excluded'):'')+(items.length>=1000?playlistGoalText(' · limite de 1 000 titres atteinte',' · 1,000-track limit reached'):'');
@@ -468,14 +477,14 @@ function weightedPick(items,surprise) {
 }
 // Répartition équitable : on favorise les artistes encore peu sélectionnés,
 // puis le tirage pondéré à l'intérieur de chaque artiste. Aucune limite fixe.
-function diversified(groups,target,surprise) {
+function diversified(groups,target,surprise,maxItems=1000) {
   const pools=groups.filter(g=>g.tracks.length).map(g=>({
     artist:g.artist,weight:Math.max(.001,g.weight||0),
     tracks:g.tracks.slice(),used:0
   }));
   const picked=[],seenPaths=new Set(),seenIds=new Set();
   let lastArtist='';
-  while(!playlistGoalDone(picked,target)) {
+  while(picked.length<maxItems&&!playlistGoalDone(picked,target)) {
     const eligible=pools.filter(g=>g.tracks.some(t=>
       !seenPaths.has(t.path) && !seenIds.has(normalize(t.artist)+'|'+normalize(t.title)) && playlistGoalFits(t,picked)));
     if(!eligible.length) break;
@@ -587,7 +596,7 @@ async function collectArtistTracks(artist,similarity,key,matcher,minScore,perPag
   }
   return {count:tracks.length,added};
 }
-async function fromArtist(track,key,target,minScore,matcher,surprise,excludeIds=new Set()) {
+async function fromArtist(track,key,target,minScore,matcher,surprise,excludeIds=new Set(),excludePaths=new Set()) {
   setStatus(uiText("Last.fm : recherche des artistes proches…"));
   const data=await lastfm('artist.getSimilar',{artist:track.artist,limit:'100'},key);
   const artists=asArray(data.similarartists?.artist)
@@ -596,6 +605,21 @@ async function fromArtist(track,key,target,minScore,matcher,surprise,excludeIds=
   const groups=[],seenArtists=new Set();
   const stats={discovered:artists.length,explored:0,represented:0,candidates:0,expansion:0,warnings:[],librarySearches:0};
   const known=new Set(excludeIds);
+  const durationMode=activePlaylistGoal?.mode==='duration',durationPicked=[];
+  const selectedIds=new Set(excludeIds),selectedPaths=new Set([...excludePaths].map(p=>p.toLowerCase()));
+  function enough(){
+    if(!durationMode)return playlistGoalPoolEnough(groups.flatMap(g=>g.tracks),target);
+    if(durationPicked.length>=target)return true;
+    const offset=activePlaylistGoal.offset||0;
+    try{
+      activePlaylistGoal.offset=offset+playlistSeconds(durationPicked);
+      const available=groups.map(g=>({...g,tracks:g.tracks.filter(t=>!selectedIds.has(normalize(t.artist)+'|'+normalize(t.title))&&!selectedPaths.has(t.path.toLowerCase()))}));
+      const added=diversified(available,target,surprise,Math.max(0,target-durationPicked.length));
+      for(const t of added){durationPicked.push(t);selectedIds.add(normalize(t.artist)+'|'+normalize(t.title));selectedPaths.add(t.path.toLowerCase());}
+    }finally{activePlaylistGoal.offset=offset;}
+    // Sub-second differences are below the displayed duration precision.
+    return durationPicked.length>=target||playlistSeconds(durationPicked)>=playlistGoalLimit()-0.999;
+  }
   const missing={missingArtists:[],missingTracks:[],missingKeys:new Set()};
   async function explore(start,end) {
     for(let i=start;i<Math.min(end,artists.length);i++) {
@@ -620,13 +644,13 @@ async function fromArtist(track,key,target,minScore,matcher,surprise,excludeIds=
   }
   // 30 artistes d'abord ; extensions à 60 puis 100 seulement si nécessaire.
   await explore(0,30);
-  if(!playlistGoalPoolEnough(groups.flatMap(g=>g.tracks),target) && artists.length>30) {stats.expansion=60;await explore(30,60);}
-  if(!playlistGoalPoolEnough(groups.flatMap(g=>g.tracks),target) && artists.length>60) {stats.expansion=100;await explore(60,100);}
+  if(!enough() && artists.length>30) {stats.expansion=60;await explore(30,60);}
+  if(!enough() && artists.length>60) {stats.expansion=100;await explore(60,100);}
   // Si l'on manque encore de titres, pages suivantes chez les artistes connus.
-  if(!playlistGoalPoolEnough(groups.flatMap(g=>g.tracks),target)) {
+  if(!enough()) {
     for(const page of [2,3]) {
-      for(const group of groups.filter(g=>g.tracks.length).sort((a,b)=>b.weight-a.weight)) {
-        if(playlistGoalPoolEnough(groups.flatMap(g=>g.tracks),target)) break;
+      for(const group of groups.filter(g=>g.tracks.length||(durationMode&&g.weight*100>=minScore&&matcher.hasArtist(g.artist))).sort((a,b)=>b.weight-a.weight)) {
+        if(enough()) break;
         setStatus(uiText("Complément des discographies : ")+group.artist+' (page '+page+')');
         try {
           await collectArtistTracks(group.artist,group.weight,key,matcher,minScore,100,page,
@@ -638,12 +662,13 @@ async function fromArtist(track,key,target,minScore,matcher,surprise,excludeIds=
         stats.candidates=groups.reduce((n,g)=>n+g.tracks.length,0);
         await sleep(0);
       }
-      if(playlistGoalPoolEnough(groups.flatMap(g=>g.tracks),target)) break;
+      if(enough()) break;
     }
   }
   stats.represented=groups.filter(g=>g.tracks.length).length;
   stats.librarySearches=matcher.searches;
-  return {items:mixOrder(diversified(groups,target,surprise),surprise),stats,mode:'artist',missing};
+  if(durationMode)enough();
+  return {items:mixOrder(durationMode?durationPicked:diversified(groups,target,surprise),surprise),stats,mode:'artist',missing};
 }
 async function fromTrack(track,key,target,minScore,matcher,surprise) {
   setStatus(uiText("Last.fm : morceaux similaires…"));
@@ -768,7 +793,7 @@ async function search(artistOverride=null) {
         setStatus(uiText("Mode automatique : ")+playlistGoalSummary(direct.items,target)+
           uiText(" titres directs. Recherche du complément chez les artistes similaires…"));
         let supplement;try{if(activePlaylistGoal.mode==='duration')activePlaylistGoal.offset=playlistSeconds(direct.items);supplement=await fromArtist(track,key,target-direct.items.length,
-          minScore,matcher,surprise,ids);}finally{activePlaylistGoal.offset=0;}
+          minScore,matcher,surprise,ids,new Set(direct.items.map(t=>t.path.toLowerCase())));}finally{activePlaylistGoal.offset=0;}
         const byId=new Map();
         for(const t of [...direct.items,...supplement.items]) {
           const id=normalize(t.artist)+'|'+normalize(t.title);
@@ -795,7 +820,7 @@ async function search(artistOverride=null) {
     draw();drawMissing();
     const text=(result.mode==='hybrid'?uiText("Automatique · hybride"):result.mode==='artist'?uiText("Artistes similaires"):result.mode==='topArtist'?uiText("Top titres de l’artiste"):uiText("Morceaux similaires"))+
       ' · '+playlistGoalSummary(selection,target)+(result.mode==='topArtist'?'':uiText(" Surprise : ")+surprise+'/100.');
-    setStatus(text);
+    setStatus(text+playlistGoalNotice(selection));
     $('summary').textContent=(result.mode==='topArtist'
       ? result.stats.pages+uiText(" page(s) Last.fm consultée(s) ; ")+result.stats.examined+uiText(" titres examinés ; ")+result.stats.librarySearches+uiText(" recherche(s) Foobar.")+
         (result.stats.pages>=result.stats.maxPages&&selection.length<target?uiText(" Limite de pagination atteinte."):'')
@@ -809,7 +834,7 @@ async function search(artistOverride=null) {
       : (result.remote||0)+uiText(" recommandations Last.fm examinées.\n"))+
       result.stats.candidates+uiText(" titres locaux candidats ; ")+result.stats.librarySearches+uiText(" recherches Foobar.\n")+
       (result.stats.expansion?uiText("Élargissement jusqu’à ")+result.stats.expansion+uiText(" artistes.\n"):'')+
-      (result.stats.warnings?.length?result.stats.warnings.length+uiText(" requête(s) Last.fm ignorée(s)."):'');
+      (result.stats.warnings?.length?result.stats.warnings.length+uiText(" requête(s) Last.fm ignorée(s)."):'')+playlistGoalNotice(selection);
   } catch(e) {setStatus(uiText("Erreur : ")+(e.message||String(e)),true);}
   finally {setWorking(false);}
 }
@@ -1140,7 +1165,7 @@ async function searchFriend(){
     }
     selection=chosen;source={kind:'friend',user,type,period};searchMode='friend';
     renderFriends(chosen,missing);
-    setFriendStatus(user+' : '+playlistGoalSummary(chosen,target));
+    setFriendStatus(user+' : '+playlistGoalSummary(chosen,target)+playlistGoalNotice(chosen));
     $('friendSummary').textContent=pagesRead+uiText(" page(s) Last.fm ; ")+examined+uiText(" titres distincts examinés ; ")+missing.length+uiText(" titres absents ; ")+matcher.searches+uiText(" recherches Foobar.");
     $('summary').textContent='';$('results').replaceChildren();
   }catch(e){setFriendStatus(uiText("Erreur : ")+(e.message||String(e)),true);}
@@ -1244,7 +1269,7 @@ async function searchTags(){
   const key=$('key').value.trim();if(!key)throw Error(uiText("Renseigne ta clé API dans Paramètres."));
   const options={tags:parseTags($('tagInput').value),mode:$('tagMode').value,combination:$('tagCombine').value,order:$('tagOrder').value,surprise:clampNumber($('tagSurprise').value,0,100,40),target:beginPlaylistGoal('tags'),maximum:clampNumber($('tagMaximum').value,1,20,3),budget:clampNumber($('tagBudget').value,10,300,80)};
   saveTagPreferences();const result=await collectTagged(options,key,makeLibraryMatcher());selection=result.items;searchMode='tags';source={kind:'tags',artist:options.tags.join(' + '),title:(options.mode==='artists'?uiText("par artistes"):uiText("par morceaux"))+' · '+(options.combination==='all'?uiText("tous les tags"):uiText("au moins un tag"))};
-  missingArtists=result.missing.missingArtists;missingTracks=result.missing.missingTracks;drawMissing();drawTagResults();drawTagMissing(result.missing);tagStatus(playlistGoalSummary(selection,options.target)+uiText(" · surprise ")+options.surprise+'/100.');
+  missingArtists=result.missing.missingArtists;missingTracks=result.missing.missingTracks;drawMissing();drawTagResults();drawTagMissing(result.missing);tagStatus(playlistGoalSummary(selection,options.target)+uiText(" · surprise ")+options.surprise+'/100.'+playlistGoalNotice(selection));
   $('tagSummary').textContent=result.stats.seeds+uiText(" candidats Last.fm repérés (dont ")+result.stats.jointSeeds+uiText(" issus des recherches croisées) ; ")+result.stats.examined+uiText(" candidats examinés ; ")+result.stats.local+uiText(" titres locaux candidats.\n")+result.stats.requests+uiText(" requêtes ; ")+result.stats.cache+uiText(" réponses en cache. Résultats limités au réservoir examiné et à ")+options.maximum+uiText(" titre(s) par artiste.")+(result.stats.warnings?' '+result.stats.warnings+uiText(" requête(s) non aboutie(s)."):'');
  }catch(e){tagStatus(e.message||String(e),true);}finally{tagSearching=false;setWorking(false);}
 }
@@ -1445,7 +1470,7 @@ async function searchMultiArtists(){if(working)return;let seeds;try{seeds=multiS
  const matcher=makeLibraryMatcher(),pool=[],known=new Set(),missing={missingArtists:[],missingTracks:[],missingKeys:new Set()};
  for(const a of ordered.slice(0,60)){if(multiController.signal.aborted)throw new DOMException('Stopped','AbortError');examined++;setStatus(infoText('Exploration multi-artistes : ','Multi-artist exploration: ')+examined+'/'+Math.min(60,ordered.length)+' · '+a.name);const origins=[...a.weights.keys()],weight=Math.max(...a.weights.values());if(!matcher.hasArtist(a.name)){missing.missingArtists.push({name:a.name,weight});continue;}
  try{const data=await multiRequest('artist.getTopTracks',{artist:a.name,limit:'100',page:'1'},key);requests++;let rank=0;for(const t of asArray(data.toptracks?.track)){rank++;const item=candidate(a.name,t.name,100*weight,matcher);if(!item){pushMissingTrack(missing,a.name,t.name,100*weight,true);continue;}const id=normalize(item.artist)+'|'+normalize(item.title);if(known.has(id))continue;known.add(id);pool.push({...item,source:'artist',rank,seedOrigins:origins});}}catch(e){if(e.name==='AbortError'||/code (10|26|29)/.test(e.message))throw e;warnings.push(a.name+' : '+e.message);}await sleep(180);}
- selection=multiChoose(pool,seeds,target,maximum,blend,surprise);source={kind:'multi',artist:seeds.join(' + '),title:infoText('Radio multi-artistes','Multi-artist radio')};missingArtists=missing.missingArtists;missingTracks=missing.missingTracks;draw();drawMissing();$('current').textContent=infoText('Points de départ : ','Seeds: ')+seeds.join(' + ');setStatus(playlistGoalSummary(selection,target));$('summary').textContent=examined+infoText(' artistes examinés · ',' artists examined · ')+pool.length+infoText(' titres locaux candidats · ',' local candidate tracks · ')+requests+infoText(' requêtes Last.fm.',' Last.fm requests.')+(warnings.length?'\n'+warnings.length+infoText(' erreurs de requête signalées.',' request errors reported.'):'')+'\n'+seeds.map(s=>s+' : '+selection.filter(t=>t.seedOrigins.includes(s)).length).join(' · ');latestStats={examined,candidates:pool.length,warnings};
+ selection=multiChoose(pool,seeds,target,maximum,blend,surprise);source={kind:'multi',artist:seeds.join(' + '),title:infoText('Radio multi-artistes','Multi-artist radio')};missingArtists=missing.missingArtists;missingTracks=missing.missingTracks;draw();drawMissing();$('current').textContent=infoText('Points de départ : ','Seeds: ')+seeds.join(' + ');setStatus(playlistGoalSummary(selection,target)+playlistGoalNotice(selection));$('summary').textContent=examined+infoText(' artistes examinés · ',' artists examined · ')+pool.length+infoText(' titres locaux candidats · ',' local candidate tracks · ')+requests+infoText(' requêtes Last.fm.',' Last.fm requests.')+(warnings.length?'\n'+warnings.length+infoText(' erreurs de requête signalées.',' request errors reported.'):'')+'\n'+seeds.map(s=>s+' : '+selection.filter(t=>t.seedOrigins.includes(s)).length).join(' · ');latestStats={examined,candidates:pool.length,warnings};
  }catch(e){selection=[];source=null;$('results').replaceChildren();setStatus(e.name==='AbortError'?infoText('Recherche arrêtée ou délai de réponse dépassé. Aucun résultat partiel utilisé.','Search stopped or timed out. Partial results were discarded.'):e.message,true);}finally{multiController=null;$('multi-stop').hidden=true;for(const id of ['mode','multi-artists','multi-blend','multi-limit','multi-from-selection','multi-from-browser'])$(id).disabled=false;setWorking(false);}}
 $('multi-stop').onclick=()=>multiController?.abort();
 try{const saved=JSON.parse(localStorage.getItem('lastfm.multi.v1')||'null');if(saved){$('multi-artists').value=String(saved.artists||'');$('multi-limit').value=clampNumber(saved.maximum,1,20,3);$('multi-blend').value=saved.blend==='common'?'common':'balanced';}}catch{}

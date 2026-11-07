@@ -2,6 +2,25 @@
 
 Notable changes to Last.fm Radio for foobar2000 are recorded here, with the latest version first.
 
+## 2.7.2 - 2026-11-07
+
+### Fixed
+
+- Discovery duration searches now decide whether to expand from the tracks actually retained, instead of the raw duration of the candidate pool. Overlong tracks and duplicate paths no longer make an insufficient selection appear complete.
+- Keep the retained selection while examining additional artists and pages. Automatic supplements also exclude paths already selected from direct track recommendations.
+- In duration mode, locally present artists remain eligible for later top-track pages even when page one produced no local match.
+
+### Added
+
+- Clear French and English messages when a duration target is not reached, showing actual, requested and missing time. Discovery retains the explanation in its search summary; duration results in Tags, Users and multi-artist radio also show the message.
+
+### Notes
+
+- Whole tracks stay within the chosen duration; the combined 1,000-track limit and existing search limits remain in force. A requested duration is not guaranteed when recommendations, local matches or filters are insufficient.
+- Saved preference keys, count-mode behavior and the installation path are unchanged.
+- A simulated premature-stop case now expands to three hours. Regression checks cover overlong tracks, duplicate paths, later-page matches, automatic offsets, count mode and bilingual shortfall messages. Isolated interface tests cover the automatic flow and preference persistence. These tests do not establish every live Last.fm or Foobar workflow.
+- The release ZIP contains only index.html, README.md, CHANGELOG.md and LICENSE. No credentials or personal installation data are included.
+
 ## 2.7.1 - 2026-11-07
 
 ### Added
@@ -138,4 +157,5 @@ Notable changes to Last.fm Radio for foobar2000 are recorded here, with the late
 
 [2.3.1]: https://github.com/thomasandro/foobar-lastfm-radio/commit/22229f79ff5d4560a7bea6a3911c5f27ad06fd5b
 [2.3.0]: https://github.com/thomasandro/foobar-lastfm-radio/tree/22229f79ff5d4560a7bea6a3911c5f27ad06fd5b%5E
+
 
