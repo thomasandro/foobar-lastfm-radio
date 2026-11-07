@@ -10,7 +10,7 @@ See [CHANGELOG.md](CHANGELOG.md) for changes between versions.
 
 ## Download
 
-Version **2.7.1** is available as the updated [`index.html`](index.html) in this repository. To update an existing installation, replace that file in the same location and reload the panel; keep the same WebView2 storage profile to retain saved settings. The [latest published release ZIP](https://github.com/thomasandro/foobar-lastfm-radio/releases/tag/v2.6.4) is still **2.6.4** and does not include the changes described below.
+Download **LastfmRadio-2.7.1-public.zip** from [Release 2.7.1](https://github.com/thomasandro/foobar-lastfm-radio/releases/tag/v2.7.1), or use the updated [`index.html`](index.html) in this repository. The archive contains only `index.html`, `README.md`, `CHANGELOG.md` and `LICENSE`. To update an existing installation, replace `index.html` in the same location and reload the panel; keep the same WebView2 storage profile to retain saved settings. Older release ZIPs retain their original version.
 
 Download the ready-to-install ZIP from [Releases](https://github.com/thomasandro/foobar-lastfm-radio/releases). The first public release is a **beta**: feedback from clean installations is welcome.
 

@@ -21,7 +21,7 @@ Notable changes to Last.fm Radio for foobar2000 are recorded here, with the late
 - Local development version 2.7.0 was not published separately; its playlist-duration features are included here.
 - Foobar selection in Discovery refers to the active playlist. The built-in Album List selection is not supported; optional Smooth Browser integration remains independent.
 - Duration mode is capped at 1,000 tracks. It preserves complete tracks rather than trimming audio.
-- The repository contains the 2.7.1 HTML and updated documentation. Previously published release ZIPs are unchanged.
+- Version 2.7.1 is available in the repository and as a four-file release ZIP, without credentials or personal installation data. Older releases remain available.
 - Public-copy checks cover JavaScript syntax and the absence of local credentials and personal installation paths. Duration and seed-selection behavior also passed local simulated-service tests; this does not establish every workflow on every Foobar installation.
 
 ## 2.6.4 - 2026-10-31
