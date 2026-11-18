@@ -2,6 +2,16 @@
 
 Notable changes to Last.fm Radio for foobar2000 are recorded here, with the latest version first.
 
+## 2.7.4 - 2026-11-19
+
+### Added
+
+- **Track by track (%ARTIST%)** in the Genres tab looks up genres and countries for each track’s ARTIST field. The preview and writes are scoped to the tracks selected at analysis time. Album mode stays the default.
+- **Capitalisation of Last.fm values** offers original capitalisation, a capital at the start of each word, or all uppercase. The preview shows the chosen case. Add preserves the case of existing values.
+- Analysis mode and capitalisation are saved locally.
+
+Thanks to **Gizmovision** for suggesting both changes and describing the compilation workflow.
+
 ## 2.7.3 - 2026-11-18
 
 ### Added

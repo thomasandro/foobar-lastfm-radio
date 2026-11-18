@@ -1,6 +1,6 @@
 # Last.fm Radio for foobar2000
 
-Version **2.7.3** · Windows · French / English interface
+Version **2.7.4** · Windows · French / English interface
 
 A local HTML panel for foobar2000's **foo_webview2** component. Discover music from your own library using Last.fm recommendations, tags and user charts, create playlists, and preview genre and country metadata before writing it to your files.
 
@@ -10,9 +10,9 @@ See [CHANGELOG.md](CHANGELOG.md) for changes between versions.
 
 ## Download
 
-Download **LastfmRadio-2.7.3-public.zip** from [Release 2.7.3](https://github.com/thomasandro/foobar-lastfm-radio/releases/tag/v2.7.3), or use the updated [`index.html`](index.html) in this repository. The archive contains only `index.html`, `README.md`, `CHANGELOG.md` and `LICENSE`. To update an existing installation, replace `index.html` in the same location and reload the panel; keep the same WebView2 storage profile to retain saved settings. Older release ZIPs retain their original version.
+Download **LastfmRadio-2.7.4-public.zip** from [Release 2.7.4](https://github.com/thomasandro/foobar-lastfm-radio/releases/tag/v2.7.4), or use the updated [`index.html`](index.html) in this repository. The archive contains only `index.html`, `README.md`, `CHANGELOG.md` and `LICENSE`. To update an existing installation, replace `index.html` in the same location and reload the panel; keep the same WebView2 storage profile to retain saved settings. Older release ZIPs retain their original version.
 
-Download the ready-to-install ZIP from [Releases](https://github.com/thomasandro/foobar-lastfm-radio/releases). The first public release is a **beta**: feedback from clean installations is welcome.
+Download the ready-to-install ZIP from [Releases](https://github.com/thomasandro/foobar-lastfm-radio/releases). Last.fm Radio is in **beta**. Feedback from clean installations is welcome.
 
 ## Screenshots
 
@@ -190,7 +190,13 @@ Open **Genres → Last.fm destination fields**. The defaults are **GENRE** and *
 
 The preview and the **Add** and **Replace** buttons show the selected fields. After changing a destination, analyse the selection again to preview the values in the new fields.
 
-### Capture the albums
+### Choose the analysis mode
+
+**Album** is the default. **Track by track (%ARTIST%)** uses the ARTIST field of each track selected in the active foobar2000 playlist. For a compilation, this lets each track use its own artist even when the album artist is **Various Artists**. If a track has several ARTIST values, the panel looks up each one and combines the suggestions. Tracks without an ARTIST value are skipped.
+
+Select the tracks, choose **Track by track (%ARTIST%)** in **Genres → Analysis mode**, and click **Analyse selection**. Review the preview and check which genres and countries to write for each track. Add and Replace act only on tracks captured when you ran the analysis, including tracks outside the Media Library.
+
+### Capture albums in Album mode
 
 1. In foobar2000's active playlist, select one or more tracks from each album to process.
 2. Open **Genres** and click **Analyse selection**.
@@ -202,7 +208,7 @@ Outside the library, select one complete album at a time. In that case, only the
 
 ### Choose genres
 
-Album tags are fetched first. The optional fallback uses artist tags when no suitable album tags are found. You can explicitly choose **Album tags** or **Artist tags**, enter a different artist name, or search individual proposed collaboration artists.
+In Album mode, album tags are fetched first. The optional fallback uses artist tags when no suitable album tags are found. You can explicitly choose **Album tags** or **Artist tags**, enter a different artist name, or search individual proposed collaboration artists.
 
 The preview preselects up to three, four or five suitable tags. Years, common personal/descriptive labels and recognised country tags are excluded from automatic genre selection, but remain visible. Last.fm tags are user-generated: always review the suggestions.
 
@@ -210,7 +216,7 @@ For collaborations, individual **Genres: artist name** buttons and **Find genres
 
 ### Choose countries
 
-Countries are searched independently in **artist tags**, even when the genre preview uses album tags. Exact aliases are normalised to English country names, for example:
+Country suggestions come from **artist tags** in both modes. In Track by track mode, both genres and countries use each track’s ARTIST field. Exact aliases are normalised to English country names, for example:
 
 - `Germany`, `German`, `Deutschland`, `deutsch` → `Germany`
 - `Japan`, `Japanese`, `日本` → `Japan`
@@ -228,17 +234,21 @@ The script proposes splitting on `&`, `feat`, `feat.`, `featuring`, `ft`, `ft.`,
 
 These are suggestions, not verified identities. A band name may contain one of these characters. Keep the full artist name or edit the search field when necessary. Names containing a plain internal hyphen, such as `Jean-Michel`, are not split on that hyphen.
 
+### Set capitalisation
+
+In **Genres → Capitalisation of Last.fm values**, choose **Original capitalisation** (the default), **Capitalise each word**, or **All uppercase**. For example, the last two choices turn `indie rock` into `Indie Rock` and `INDIE ROCK`. The preview shows what will be written. **Add** preserves the capitalisation of existing values, and **Replace** applies the chosen capitalisation to all checked suggestions. The panel remembers the analysis mode and capitalisation.
+
 ### Apply and verify
 
 The buttons are below the results, together with progress, confirmation and error messages:
 
-- **Add** combines the checked suggestions with the existing values across the album's included tracks, removes case-insensitive duplicates, and writes the same combined values to all included tracks.
-- **Replace** writes only the checked values for that field to all included tracks.
-- Albums with no checked values for that field are skipped; an empty selection does not clear an existing field.
+- **Add** combines the checked suggestions with the existing values and removes case-insensitive duplicates. In Album mode it combines the values from the included tracks of the album. In Track by track mode it merges each track’s values independently.
+- **Replace** writes the checked values for that field to the corresponding album or track.
+- Albums or tracks with no checked values for that field are skipped; an empty selection does not clear an existing field.
 
 Genres and countries are written in separate actions as multi-value metadata. The panel rereads each field to verify the requested values. A request accepted by foobar2000 is not reported as fully verified until this check succeeds.
 
-If verification times out, check the files' properties before retrying: some writes may already have completed. Multiple-album writes are sequential, not an all-or-nothing transaction. The status reports albums completed before an error. Metadata changes detected since the preview require a fresh analysis.
+If verification times out, check the files' properties before retrying: some writes may already have completed. Writes run sequentially. The status reports completed albums or tracks if a later write fails. Metadata changes detected since the preview require a fresh analysis.
 
 No audio encoding, file moving or deletion is performed by this panel.
 
