@@ -2,6 +2,15 @@
 
 Notable changes to Last.fm Radio for foobar2000 are recorded here, with the latest version first.
 
+## 2.7.3 - 2026-11-18
+
+### Added
+
+- The Genres tab now lets you choose where to write Last.fm genres and countries. Set each field independently under **Last.fm destination fields**. The defaults are **GENRE** and **COUNTRY**.
+- The panel saves your choices and uses them for the preview, Add, Replace and readback verification. Clear either entry and save to restore that default. Changing a destination requires a fresh analysis.
+
+Thanks to **Gizmovision** for suggesting this and sharing the **STYLE** and **LOCALE LAST.FM** workflow.
+
 ## 2.7.2 - 2026-11-07
 
 ### Fixed

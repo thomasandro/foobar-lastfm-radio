@@ -1,6 +1,6 @@
 # Last.fm Radio for foobar2000
 
-Version **2.7.2** · Windows · French / English interface
+Version **2.7.3** · Windows · French / English interface
 
 A local HTML panel for foobar2000's **foo_webview2** component. Discover music from your own library using Last.fm recommendations, tags and user charts, create playlists, and preview genre and country metadata before writing it to your files.
 
@@ -10,7 +10,7 @@ See [CHANGELOG.md](CHANGELOG.md) for changes between versions.
 
 ## Download
 
-Download **LastfmRadio-2.7.2-public.zip** from [Release 2.7.2](https://github.com/thomasandro/foobar-lastfm-radio/releases/tag/v2.7.2), or use the updated [`index.html`](index.html) in this repository. The archive contains only `index.html`, `README.md`, `CHANGELOG.md` and `LICENSE`. To update an existing installation, replace `index.html` in the same location and reload the panel; keep the same WebView2 storage profile to retain saved settings. Older release ZIPs retain their original version.
+Download **LastfmRadio-2.7.3-public.zip** from [Release 2.7.3](https://github.com/thomasandro/foobar-lastfm-radio/releases/tag/v2.7.3), or use the updated [`index.html`](index.html) in this repository. The archive contains only `index.html`, `README.md`, `CHANGELOG.md` and `LICENSE`. To update an existing installation, replace `index.html` in the same location and reload the panel; keep the same WebView2 storage profile to retain saved settings. Older release ZIPs retain their original version.
 
 Download the ready-to-install ZIP from [Releases](https://github.com/thomasandro/foobar-lastfm-radio/releases). The first public release is a **beta**: feedback from clean installations is welcome.
 
@@ -60,7 +60,7 @@ The distributed HTML file contains the panel's styles and application code; no b
 
 ### Permissions
 
-- **Write files** is required when using the buttons that write **GENRE** or **COUNTRY** metadata. Enable it in the WebView2 component/panel permissions if requested. The audio files themselves must also be writable.
+- **Write files** is required to write the selected genre or country metadata fields. Enable it in the WebView2 component/panel permissions if requested. The audio files themselves must also be writable.
 - Discovery and playlist creation do not require metadata writing.
 - This script does not launch PowerShell, an encoder or other external programs. It does not require shell-execution permissions.
 - Allow the panel's HTTPS requests to `ws.audioscrobbler.com` through your network configuration. Last.fm pages are linked for reference.
@@ -182,7 +182,13 @@ Refresh followed users, select a profile, and search for locally available loved
 
 Compatibility scores are calculated by this panel and are not Last.fm website compatibility scores. Broader network searches can take longer. Unknown listening activity is distinguished from confirmed inactivity.
 
-## Editing GENRE and COUNTRY
+## Writing genre and country tags
+
+### Choose the destination fields
+
+Open **Genres → Last.fm destination fields**. The defaults are **GENRE** and **COUNTRY**. Enter custom names such as **STYLE** and **LOCALE LAST.FM**, with or without the surrounding percent signs, then click **Save fields**. The panel remembers both settings. Clear either entry and save to restore that default.
+
+The preview and the **Add** and **Replace** buttons show the selected fields. After changing a destination, analyse the selection again to preview the values in the new fields.
 
 ### Capture the albums
 
@@ -212,7 +218,7 @@ Countries are searched independently in **artist tags**, even when the genre pre
 
 The alias table is deliberately limited rather than an exhaustive list of every country in every language. Compound style tags such as `german techno` are not converted into countries.
 
-Country suggestions are **unchecked by default** and show their source artist/tag. Adjectives may describe a language rather than an artist's origin. COUNTRY is intended here as artist origin, not the album's manufacturing or release territory.
+Country suggestions are **unchecked by default** and show their source artist/tag. Adjectives may describe a language rather than an artist's origin. The country value represents the artist’s origin, not the album's manufacturing or release territory.
 
 For collaborations, query individual artists or use **Find countries for all proposed artists**. You can retain several countries for an international collaboration.
 
@@ -226,11 +232,11 @@ These are suggestions, not verified identities. A band name may contain one of t
 
 The buttons are below the results, together with progress, confirmation and error messages:
 
-- **Add GENRE / Add COUNTRY** combines the checked suggestions with the existing values across the album's included tracks, removes case-insensitive duplicates, and writes the same combined values to all included tracks.
-- **Replace GENRE / Replace COUNTRY** writes only the checked values for that field to all included tracks.
+- **Add** combines the checked suggestions with the existing values across the album's included tracks, removes case-insensitive duplicates, and writes the same combined values to all included tracks.
+- **Replace** writes only the checked values for that field to all included tracks.
 - Albums with no checked values for that field are skipped; an empty selection does not clear an existing field.
 
-GENRE and COUNTRY are written separately, using real multi-value fields. The panel rereads each field to verify the requested values. A request accepted by foobar2000 is not reported as fully verified until this check succeeds.
+Genres and countries are written in separate actions as multi-value metadata. The panel rereads each field to verify the requested values. A request accepted by foobar2000 is not reported as fully verified until this check succeeds.
 
 If verification times out, check the files' properties before retrying: some writes may already have completed. Multiple-album writes are sequential, not an all-or-nothing transaction. The status reports albums completed before an error. Metadata changes detected since the preview require a fresh analysis.
 
